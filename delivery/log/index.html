@@ -1,0 +1,2007 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>::: デリログ :::</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;500;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #08090d; --surface: #0f1117; --surface2: #161820;
+      --border: rgba(255,255,255,0.1); --border2: rgba(255,255,255,0.18);
+      --text: #f0f0f0; --muted: rgba(255,255,255,0.45); --muted2: rgba(255,255,255,0.7);
+      --accent: #ff5c1a; --accent2: #e91e8c; --green: #00e676; --yellow: #ffd600;
+      --blue: #2979ff; --teal: #00bcd4;
+      --font-head: 'Bebas Neue', sans-serif;
+      --font-body: 'Noto Sans JP', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --radius: 14px; --radius-sm: 9px;
+    }
+    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); overflow-x: hidden; font-size: 16px; }
+    
+    #expense-form { scroll-margin-top: 100px; }
+
+    /* Keep Safari's native date field inside its expense-form grid cell. */
+    #expense-form .expense-date-amount {
+      display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+    }
+    #expense-form .expense-date-amount > label { min-width: 0; }
+    #expense-form .expense-date-amount input {
+      display: block; width: 100%; min-width: 0; max-width: 100%;
+      min-height: 50px; -webkit-appearance: none; appearance: none;
+    }
+    #expense-form input[type="date"]::-webkit-date-and-time-value {
+      min-width: 0; text-align: left;
+    }
+    @media (max-width: 480px) {
+      #expense-form .expense-date-amount { grid-template-columns: minmax(0, 1fr); }
+    }
+
+    #expense-form fieldset:disabled { opacity: .65; }
+    button:disabled { cursor: wait; opacity: .6; }
+
+    /* APP LAYOUT */
+    .app-shell { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+    .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; padding-bottom: 110px; }
+    
+    /* SIDEBAR (PC用) */
+    .sidebar {
+      width: 260px; background: var(--surface); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; padding: 20px; gap: 20px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; padding-bottom: 15px; border-bottom: 1px solid var(--border); }
+    .brand-mark { font-size: 28px; }
+    .brand-title { font-family: var(--font-head); font-size: 26px; letter-spacing: 0.05em; color: #fff; line-height: 1.1; }
+    
+    .nav-menu { display: flex; flex-direction: column; gap: 8px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+      background: transparent; border: none; border-radius: var(--radius-sm);
+      color: var(--muted2); font-size: 16px; font-weight: 700; text-align: left; cursor: pointer; transition: all 0.2s;
+    }
+    .nav-item:hover { background: rgba(255,255,255,0.03); color: #fff; }
+    .nav-item.active { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; font-weight: 900; }
+
+    /* HEADER TOPBAR */
+    .topbar {
+      background: rgba(8,9,13,0.9); backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border); padding: 16px 24px;
+      display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100;
+    }
+    .topbar h1 { font-size: 24px; font-weight: 900; letter-spacing: -0.02em; }
+    .topbar p { font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* PERIOD SWITCHER TABS */
+    .period-switcher-container { padding: 16px 20px 0; background: var(--bg); display: flex; flex-direction: column; gap: 10px; }
+    .period-tabs { display: flex; background: var(--surface); border: 1px solid var(--border); padding: 5px; border-radius: var(--radius-sm); width: 100%; max-width: 440px; margin: 0 auto; }
+    .period-tab { flex: 1; background: transparent; border: none; color: var(--muted2); padding: 11px 0; font-size: 17px; font-weight: 800; cursor: pointer; border-radius: 6px; transition: all 0.2s; text-align: center; }
+    .period-tab.active { background: var(--surface2); color: var(--accent); border: 1px solid rgba(255,92,26,0.3); font-weight: 900; }
+
+    /* ◀ PERIOD NAV BAR ▶ */
+    .period-nav-bar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 440px; margin: 0 auto; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 9px 16px; }
+    .period-nav-btn { background: transparent; border: none; color: var(--accent); font-size: 20px; font-weight: 900; cursor: pointer; padding: 4px 14px; user-select: none; }
+    .period-nav-btn:hover { color: #fff; }
+    .period-nav-display { font-size: 16px; font-weight: 800; font-family: var(--font-mono); color: #fff; text-align: center; }
+
+    /* SUMMARY BAR */
+    .summary-bar {
+      background: var(--surface); border-bottom: 1.5px solid var(--border);
+      padding: 16px 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .sum-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .sum-row.col-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .sum-item { padding: 0; min-width: 0; }
+    .sum-label { font-size: 13px; color: var(--muted); margin-bottom: 2px; white-space: nowrap; font-weight: 700; }
+    .sum-val { font-size: 21px; font-family: var(--font-mono); font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sum-val.accent { color: var(--accent); font-size: 23px; }
+    .sum-val.green { color: var(--green); }
+    .sum-val.yellow { color: var(--yellow); }
+    .sum-val.teal { color: var(--teal); }
+    .sum-row + .sum-row { border-top: 1px solid var(--border); padding-top: 10px; }
+
+    /* SPLIT WEEK SUMMARY */
+    .week-split-container {
+      background: var(--surface2);
+      border-bottom: 1.5px solid var(--border);
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .split-card {
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .split-title { font-size: 14px; font-weight: 800; letter-spacing: 0.03em; }
+    .split-title.weekday { color: var(--teal); }
+    .split-title.weekend { color: var(--accent); }
+    .split-main-amt { font-size: 22px; font-weight: 800; font-family: var(--font-mono); color: #fff; }
+    .split-sub-row { font-size: 13px; font-family: var(--font-mono); color: var(--muted2); display: flex; flex-wrap: wrap; gap: 4px 10px; }
+    .split-sub-metrics { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 13px; font-family: var(--font-mono); color: var(--muted2); margin-top: 4px; }
+    .split-sub-metrics span, .split-sub-row span { white-space: nowrap; }
+
+    /* GOAL PANEL */
+    .goal-panel { background: var(--surface); border-bottom: 1.5px solid var(--border); padding: 18px 22px; }
+    .goal-inputs-container { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+    .goal-input-row { display: flex; justify-content: space-between; align-items: center; }
+    .goal-title-flex { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--muted2); font-weight: 800; }
+    .goal-input-wrapper { display: flex; align-items: center; gap: 6px; }
+    .goal-input { font-family: var(--font-mono); font-size: 18px; font-weight: 800; background: var(--bg); border: 1.5px solid var(--border); border-radius: 8px; color: var(--text); padding: 8px 12px; width: 130px; text-align: right; }
+    
+    .progress-section { margin-top: 10px; }
+    .progress-track { width: 100%; height: 12px; background: rgba(255,255,255,0.05); border-radius: 6px; overflow: hidden; margin-bottom: 6px; border: 1px solid var(--border); }
+    .progress-bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.3s ease; }
+    .progress-bar.green { background: linear-gradient(90deg, var(--teal), var(--green)); }
+    
+    .goal-footer-row { display: flex; justify-content: space-between; font-size: 14px; font-family: var(--font-mono); flex-direction: column; gap: 4px; }
+    .goal-footer-top { display: flex; justify-content: space-between; width: 100%; align-items: center; }
+    .goal-footer-sub { display: flex; justify-content: flex-end; align-items: center; gap: 10px; font-size: 12px; font-family: var(--font-mono); margin-top: 2px; }
+    .goal-status-text { color: var(--muted); }
+    .goal-status-text strong { color: #fff; }
+    .goal-remain-text { font-weight: 800; }
+    .goal-remain-text.done { color: var(--green); }
+    .goal-remain-text.remain { color: var(--accent); }
+
+    /* VIEW MANAGEMENT */
+    .view-container { padding: 22px; max-width: 760px; width: 100%; margin: 0 auto; display: none; }
+    .view-container.active { display: block; }
+    .section-title { font-size: 15px; font-weight: 800; color: var(--muted2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 12px; margin-top: 20px; }
+
+    /* CARDS & FORMS */
+    .card { background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    label { font-size: 14px; color: var(--muted2); display: block; margin-bottom: 6px; font-weight: 700; }
+    input, select, textarea {
+      width: 100%; padding: 13px 15px; background: rgba(255,255,255,0.05);
+      border: 1.5px solid var(--border2); border-radius: var(--radius-sm); color: #fff; font-size: 16px; font-family: var(--font-body);
+    }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; background: rgba(255,255,255,0.08); }
+
+    .condition-row { display: flex; gap: 8px; margin-top: 4px; }
+    .cond-btn {
+      flex: 1; padding: 12px 6px; background: rgba(255,255,255,0.04); border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--muted2); font-size: 17px; font-weight: 800; cursor: pointer; text-align: center;
+    }
+    .cond-btn.active { border-color: var(--yellow); background: rgba(255,214,0,0.12); color: #fff; font-weight: 900; }
+
+    .daily-memo-textarea {
+      width: 100%; min-height: 120px; background: rgba(0,0,0,0.3); border: 1.5px solid var(--border2);
+      border-radius: var(--radius-sm); color: #fff; font-size: 16px; line-height: 1.6; padding: 14px;
+      font-family: var(--font-body); resize: vertical;
+    }
+
+    /* SET CARD */
+    .set-card { background: rgba(255,255,255,0.02); border: 1.5px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; overflow: hidden; }
+    .set-header { padding: 18px 20px; display: flex; flex-direction: column; gap: 8px; cursor: pointer; user-select: none; }
+    .set-header:hover { background: rgba(255,255,255,0.03); }
+    .set-header-top { display: flex; align-items: center; justify-content: space-between; }
+    .set-title { font-weight: 900; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+    .set-badge { font-size: 12px; padding: 4px 9px; border-radius: 4px; font-weight: 800; }
+    .set-badge.active { background: rgba(255,92,26,0.2); color: var(--accent); }
+    .set-badge.done { background: rgba(0,230,118,0.15); color: var(--green); }
+    
+    .set-summary-row1 { font-size: 20px; font-weight: 800; color: #fff; font-family: var(--font-mono); }
+    .set-summary-row2 { font-size: 14px; color: var(--muted2); font-family: var(--font-mono); display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .set-summary-tag { background: rgba(255,255,255,0.05); padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border); }
+
+    .time-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-top: 14px; margin-bottom: 12px; }
+    .time-field { display: flex; gap: 6px; }
+    .stamp-btn { padding: 0 16px; background: var(--accent); color: #fff; border-radius: 6px; font-size: 14px; font-weight: 900; border: none; cursor: pointer; min-height: 48px; }
+    .stamp-btn.secondary { background: rgba(255,255,255,0.15); }
+    .time-duration { font-size: 14px; color: var(--teal); font-family: var(--font-mono); margin-top: 4px; font-weight: 800; }
+
+    .platform-block { border: 1.5px solid var(--border); border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; }
+    .platform-title { font-weight: 800; font-size: 16px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .diff-badge { font-size: 14px; font-family: var(--font-mono); opacity: 0.9; }
+    .pf-inputs { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+    .del-btn { width: 100%; padding: 14px; background: rgba(255,50,50,0.15); color: #ff5555; border: 1px solid rgba(255,50,50,0.3); border-radius: 8px; font-weight: 800; cursor: pointer; margin-top: 12px; font-size: 15px; }
+    .add-btn { width: 100%; padding: 18px; background: rgba(255,255,255,0.05); color: #fff; border: 1.5px dashed var(--border2); border-radius: var(--radius); font-weight: 800; cursor: pointer; font-size: 17px; }
+
+    .log-box { background: #000; border: 1px solid var(--border); border-radius: var(--radius); margin-top: 14px; padding: 18px; font-family: var(--font-mono); font-size: 14px; white-space: pre-wrap; line-height: 1.7; color: #ccc; }
+    .copy-btn { width: 100%; margin-top: 10px; padding: 16px; background: var(--green); color: #000; font-weight: 900; border-radius: 8px; border: none; cursor: pointer; font-size: 17px; }
+
+    /* CALENDAR */
+    .cal-header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+    .cal-title-nav { display: flex; align-items: center; gap: 14px; }
+    .cal-nav-btn { background: rgba(255,255,255,0.08); border: 1px solid var(--border); color: #fff; padding: 9px 16px; border-radius: 8px; cursor: pointer; font-weight: 800; font-size: 16px; }
+    .cal-nav-btn:hover { background: rgba(255,255,255,0.15); }
+    .cal-title-text { font-size: 22px; font-weight: 900; }
+    .cal-monthly-total { font-family: var(--font-mono); font-size: 19px; font-weight: 800; color: var(--accent); background: rgba(255,92,26,0.1); padding: 8px 18px; border-radius: 20px; border: 1px solid rgba(255,92,26,0.25); }
+
+    .cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; margin-top: 12px; width: 100%; }
+    .cal-head-cell { text-align: center; font-size: 14px; color: var(--muted); font-weight: 800; padding: 6px 0; }
+    
+    .cal-day-cell {
+      background: var(--surface); border: 1.5px solid var(--border); border-radius: 8px;
+      min-height: 96px; padding: 6px 4px; cursor: pointer; display: flex; flex-direction: column;
+      justify-content: space-between; min-width: 0; position: relative; overflow: hidden;
+    }
+    .cal-day-cell:hover { background: var(--surface2); border-color: var(--muted2); }
+    .cal-day-cell.empty { background: transparent; border: none; cursor: default; }
+    .cal-day-cell.selected { border-color: var(--accent); background: rgba(255,92,26,0.08); }
+    
+    .cal-day-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .cal-day-num { font-size: 15px; font-weight: 800; font-family: var(--font-mono); color: var(--muted2); }
+    .cal-day-num.current-month { color: #fff; }
+    .cal-day-cond { font-size: 12px; line-height: 1; }
+    
+    .cal-day-amt-box { text-align: right; width: 100%; margin-top: auto; }
+    .cal-day-amt {
+      font-size: 13px; font-family: var(--font-mono); font-weight: 800; color: var(--accent);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;
+    }
+
+    /* 📝 MEMO / INBOX (Keep風ポップアップ編集 & 視認性UP) */
+    .memo-cat-filter { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 14px; }
+    .memo-cat-btn {
+      padding: 9px 16px; background: rgba(255,255,255,0.05); border: 1.5px solid var(--border);
+      border-radius: 22px; color: var(--muted2); font-size: 15px; font-weight: 700; white-space: nowrap; cursor: pointer;
+    }
+    .memo-cat-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 900; }
+    
+    .memo-item-card {
+      background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius);
+      padding: 18px; margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .memo-item-card:hover { background: var(--surface2); border-color: var(--muted2); }
+    .memo-item-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); }
+    
+    .memo-preview-text {
+      font-size: 17px; line-height: 1.6; color: #fff; white-space: pre-wrap;
+      word-break: break-word; max-height: 160px; overflow: hidden; position: relative;
+    }
+    .memo-tag-pill {
+      font-size: 13px; padding: 4px 10px; border-radius: 6px; background: rgba(255,255,255,0.08);
+      color: var(--teal); font-weight: 800; border: 1px solid var(--border);
+    }
+
+    /* 🪟 Google Keep風 全面ポップアップ編集モーダル */
+    .modal-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(12px);
+      z-index: 9999; display: flex; justify-content: center; align-items: center;
+      padding: 16px; animation: fadeIn 0.15s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    
+    .memo-modal-card {
+      background: var(--surface); border: 1.5px solid var(--border2); border-radius: 18px;
+      width: 100%; max-width: 680px; height: 86vh; display: flex; flex-direction: column;
+      overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+    }
+    .modal-header {
+      padding: 16px 20px; border-bottom: 1.5px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+    }
+    .modal-body {
+      flex: 1; padding: 20px; display: flex; flex-direction: column; overflow-y: auto;
+    }
+    .modal-textarea {
+      flex: 1; width: 100%; height: 100%; background: transparent; border: none;
+      color: #fff; font-size: 18px; line-height: 1.7; font-family: var(--font-body);
+      resize: none; outline: none; padding: 0;
+    }
+    .modal-footer {
+      padding: 14px 20px; border-top: 1.5px solid var(--border);
+      display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.25);
+    }
+
+    /* BOTTOM NAV TABS */
+    .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; height: 76px; background: rgba(15,17,23,0.95); backdrop-filter: blur(20px); border-top: 1.5px solid var(--border); display: none; justify-content: space-around; align-items: center; z-index: 500; }
+    .tab-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent; border: none; color: var(--muted); gap: 4px; font-size: 13px; font-weight: 700; cursor: pointer; width: 75px; }
+    .tab-btn.active { color: var(--accent); font-weight: 900; }
+    .nav-icon { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: color 0.2s; }
+    .tab-btn.active .nav-icon { stroke: var(--accent); }
+
+    .cloud-indicator { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 800; padding: 6px 14px; border-radius: 20px; background: rgba(41,121,255,0.1); color: var(--blue); }
+    .cloud-indicator.unsaved { background: rgba(255,214,0,0.1); color: var(--yellow); }
+    .gen-btn { width: 100%; padding: 18px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: var(--radius); color: #fff; font-size: 19px; font-weight: 900; border: none; cursor: pointer; }
+
+    /* 📱 スマホ最適化 */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .bottom-nav { display: flex; }
+      .topbar { padding: 14px 16px; }
+      .view-container { padding: 16px; }
+      .summary-bar { padding: 14px 16px; gap: 10px; }
+      .week-split-container { padding: 12px 16px; gap: 10px; }
+      .goal-panel { padding: 14px 16px; }
+      .grid-3 { grid-template-columns: 1fr; gap: 12px; }
+      
+      .cal-day-cell { min-height: 82px; padding: 4px 2px; }
+      .cal-day-num { font-size: 13px; }
+      .cal-day-amt { font-size: 12px; font-weight: 800; } 
+      
+      .sum-val { font-size: 19px; }
+      .sum-val.accent { font-size: 22px; }
+      .split-main-amt { font-size: 19px; }
+
+      .memo-modal-card { height: 92vh; border-radius: 14px; }
+      .modal-textarea { font-size: 17px; }
+    }
+
+    /* iPhone-first readability and tap-target redesign (2026-10) */
+    @media (max-width: 768px) {
+      html, body { font-size: 17px; }
+      .main-content { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+      .topbar { padding: 16px 18px; }
+      .topbar h1 { font-size: 25px; }
+      .topbar p, .sum-label, .split-sub-row, .split-sub-metrics, .goal-footer-row,
+      .set-summary-row2, .memo-item-header, .cloud-indicator { font-size: 15px; }
+      .period-switcher-container { padding: 14px 16px 0; }
+      .period-tab { min-height: 48px; font-size: 18px; }
+      .period-nav-btn { min-width: 52px; min-height: 48px; }
+      .period-nav-display { font-size: 18px; }
+      .summary-bar { margin: 14px 16px 0; padding: 20px 18px; border: 1px solid var(--border2);
+        border-radius: 18px; gap: 0; background: var(--surface); }
+      .summary-bar .sum-row, .summary-bar .sum-row.col-3 { display: grid; grid-template-columns: repeat(2,minmax(0,1fr));
+        gap: 16px; padding: 15px 0; border-top: 1px solid var(--border); }
+      .summary-bar .sum-row:first-child { display: block; padding: 0 0 18px; border-top: none; }
+      .summary-bar .sum-row:first-child .sum-item:not(:first-child) { display: none; }
+      .summary-bar .sum-row:first-child .sum-label { font-size: 16px; }
+      .summary-bar .sum-row:first-child .sum-val.accent { font-size: clamp(32px, 9vw, 42px); line-height: 1.25;
+        white-space: normal; overflow: visible; }
+      .summary-bar .sum-label { font-size: 15px; margin-bottom: 6px; color: #b8bac4; }
+      .summary-bar .sum-val { font-size: clamp(19px, 5.5vw, 25px); line-height: 1.3; overflow: visible; white-space: normal; }
+      .summary-bar .sum-row:last-of-type { padding-bottom: 0; }
+      .summary-secondary { margin: 14px 16px 0; }
+      .summary-secondary summary { cursor: pointer; min-height: 48px; padding: 14px 16px; border: 1px solid var(--border2);
+        border-radius: 12px; font-size: 16px; font-weight: 800; background: var(--surface); }
+      .summary-secondary[open] summary { margin-bottom: 8px; }
+      .summary-secondary .summary-extra { padding: 12px 16px; border-radius: 12px; background: var(--surface); }
+      .summary-secondary .summary-extra .sum-row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; }
+      .summary-secondary .sum-val { font-size: 18px; font-weight: 800; }
+      .quick-log-btn { display: block; width: calc(100% - 32px); margin: 14px 16px 4px;
+        min-height: 56px; border: none; border-radius: 14px; background: var(--accent);
+        color: #fff; font-size: 19px; font-weight: 900; cursor: pointer; }
+      .view-container { padding: 18px 16px; }
+      .section-title { font-size: 18px; line-height: 1.45; margin: 24px 0 12px; color: #e1e2e8; }
+      .card { padding: 18px 16px; }
+      label { font-size: 16px; margin-bottom: 8px; }
+      input, select, textarea { min-height: 48px; font-size: 17px; padding: 13px 12px; }
+      .set-header { padding: 18px 16px; min-height: 90px; }
+      .set-summary-row1 { font-size: 23px; }
+      .set-summary-row2 { font-size: 15px; }
+      .platform-title { font-size: 17px; }
+      .diff-badge { font-size: 15px; }
+      .bottom-nav { height: calc(72px + env(safe-area-inset-bottom)); padding-bottom: env(safe-area-inset-bottom); }
+      .tab-btn { min-width: 70px; min-height: 56px; font-size: 14px; }
+      .nav-icon { width: 26px; height: 26px; }
+      .cal-day-num { font-size: 15px; }
+      .cal-day-amt { font-size: 14px; }
+      .cal-day-cell { min-height: 88px; }
+      .goal-title-flex { font-size: 16px; }
+      .goal-footer-sub { font-size: 14px; flex-wrap: wrap; }
+    }
+
+    /* Goals and platform readability */
+    .platform-overview { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; margin-bottom: 22px; }
+    .platform-overview-card { background: var(--surface); border: 1px solid var(--border2); border-left: 4px solid;
+      border-radius: 12px; padding: 16px; min-width: 0; }
+    .platform-overview-name { font-size: 17px; font-weight: 900; margin-bottom: 9px; }
+    .platform-overview-amount { font-size: 24px; font-weight: 900; font-family: var(--font-mono); overflow-wrap: anywhere; }
+    .platform-overview-amount small { font-size: 14px; font-weight: 700; }
+    .platform-overview-stats { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 15px; margin-top: 8px; color: #d2d4dc; }
+    @media (max-width: 768px) {
+      .summary-bar .sum-row:last-of-type { padding-bottom: 0; }
+      .goal-panel { margin: 16px; padding: 18px 16px; border: 1px solid var(--border2); border-radius: 16px;
+        background: var(--surface); }
+      .goal-inputs-container { display: grid; grid-template-columns: 1fr; gap: 16px; }
+      .goal-input-row { display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+      .goal-title-flex { font-size: 17px; color: #e4e5eb; }
+      .goal-input-wrapper { width: 100%; max-width: none; display: flex; align-items: center; gap: 10px; }
+      .goal-input { min-width: 0; width: 100%; font-size: 21px; font-weight: 800; min-height: 52px; }
+      .goal-status-text, .goal-remain-text { font-size: 16px; }
+      .progress-section { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+      .progress-track { min-height: 12px; border-radius: 9px; }
+      .goal-footer-top { gap: 8px; flex-wrap: wrap; }
+      .goal-footer-sub { justify-content: flex-start; line-height: 1.7; }
+      .goal-footer-sub span span { font-size: 13px !important; }
+      .platform-overview { grid-template-columns: 1fr; gap: 10px; }
+      .platform-overview-card { padding: 15px 17px; }
+      .platform-overview-amount { font-size: 26px; }
+      .platform-overview-stats { font-size: 16px; }
+    }
+    .planner { line-height:1.8; }
+    .planner-home { padding:16px; max-width:1000px; width:100%; margin:auto; }
+    .planner h2, .planner h3, .planner h4 { margin:12px 0; }
+    .planner p, .planner label { margin:8px 0; }
+    .planner button:not(.gen-btn):not(.del-btn) {padding:12px;min-height:44px;border:1px solid var(--border2);border-radius:8px;background:var(--surface2);color:var(--text);font-size:16px;cursor:pointer;}
+    .planner input,.planner select {min-width:0;max-width:100%;}
+    .planner .card {min-width:0;overflow-wrap:anywhere;}
+    .planner-results {display:grid;grid-template-columns:1fr;gap:12px;}
+    .planner-results .card {margin-bottom:0;}
+    @media(min-width:1100px){.planner.view-container {max-width:1200px;} .planner-results{grid-template-columns:repeat(3,minmax(0,1fr));}}
+    @media(max-width:480px){.planner .grid-3{grid-template-columns:1fr;} .planner .grid-2{grid-template-columns:1fr;} }
+
+    .planner-home {padding:16px; margin:0 auto;}
+    .planner .today-card {padding:22px; border:1px solid #343944; border-radius:22px; background:radial-gradient(ellipse at 100% 0,rgba(255,92,26,.09),transparent 55%),#101218; box-shadow:0 12px 32px rgba(0,0,0,.18);}
+    .today-heading {display:flex;justify-content:space-between;align-items:center;gap:12px;}
+    .today-eyebrow {font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;color:#ff8c59;}
+    .planner .today-heading h3 {font-size:22px;margin:2px 0 0;letter-spacing:.02em;}
+    .today-date {font-family:var(--font-mono);font-size:14px;color:#adb3c0;}
+    .today-basis {font-size:12px;color:#a6adba;margin-top:8px;}
+    .today-hero {padding:24px 0 12px;}
+    .today-hero>span {font-size:14px;color:#c5cad3;}
+    .today-amount {font-family:var(--font-mono);font-size:clamp(34px,10vw,52px);font-weight:800;line-height:1.35;letter-spacing:-.04em;color:#fff;}
+    .today-amount small {font-family:var(--font-body);font-size:19px;letter-spacing:0;margin-left:8px;color:#aeb6c5;}
+    .today-amount.is-empty {font-family:var(--font-body);font-size:30px;color:#858fa1;letter-spacing:.05em;}
+    .today-track {height:5px;background:#252a35;border-radius:4px;overflow:hidden;}
+    .today-track>span {display:block;height:100%;background:linear-gradient(90deg,#ff5c1a,#ffa369);border-radius:4px;transition:width .2s;}
+    .today-target {display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:13px;color:#9da7b8;padding:10px 0;}
+    .today-target strong {font-family:var(--font-mono);color:#dfe4ed;font-size:14px;}
+    .planner .today-empty {font-size:13px;color:#a7afbe;line-height:1.7;margin:0 0 16px;}
+    .today-metrics {display:grid;grid-template-columns:1fr 1fr;gap:12px;border-top:1px solid #292f3a;padding:16px 0;margin-top:10px;}
+    .today-metrics>div {display:flex;flex-direction:column;gap:4px;min-width:0;}
+    .today-metrics>div+div {border-left:1px solid #292f3a;padding-left:16px;}
+    .today-metrics span {font-size:12px;color:#a8b1c0;}
+    .today-metrics strong {font-size:19px;line-height:1.5;color:#f1f4fa;}
+    .today-metrics small {font-size:13px;margin-left:5px;color:#a8b1c0;}
+    .today-quest {padding:15px 16px;background:#111e1a;border:1px solid #224436;border-radius:14px;margin-top:8px;}
+    .today-quest-head,.today-quest-progress {display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}
+    .today-quest-head {font-size:12px;color:#b5c8be;}
+    .today-quest-head i {display:inline-block;width:6px;height:6px;background:#46da98;border-radius:50%;margin-right:6px;}
+    .today-quest-head>strong {font-size:15px;color:#71e6af;}
+    .today-quest-progress {margin:10px 0;}
+    .today-quest-progress strong {font-size:25px;font-family:var(--font-mono);line-height:1.3;}
+    .today-quest-progress small,.today-quest-progress>span {font-size:12px;font-family:var(--font-body);color:#9eb5a8;}
+    .quest-track>span {background:#4bd89b;}
+    .today-quest-foot {font-size:11px;color:#9bb1a4;text-align:right;margin-top:7px;}
+    .today-actions {display:grid;grid-template-columns:1.15fr 1fr;gap:10px;margin-top:20px;}
+    .today-actions .gen-btn {background:#ff641f;border-radius:12px;min-height:52px;font-size:16px;padding:12px;margin:0;}
+    .today-actions .gen-btn span {margin-left:6px;}
+    .planner .today-actions .today-edit {background:#1a1e27;border:1px solid #3c4453;border-radius:12px;color:#e0e5ee;padding:10px;font-size:14px;line-height:1.4;}
+    @media(max-width:480px){.planner .today-card{padding:20px 18px;} .today-actions{grid-template-columns:1.15fr 1fr;} }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useMemo, useEffect, useCallback } = React;
+
+const SK = {
+  db: 'delivery_log_vault_v13',
+  currentDate: 'delivery_log_current_date_v13',
+  goals: 'delivery_log_periodic_goals_v13',
+  memos: 'delivery_log_inbox_memos_v13',
+  expenses: 'delivery_log_expenses_v1'
+};
+
+const PLATFORMS = [
+  { key: 'd', label: '出前館', color: '#ff2a2a' },
+  { key: 'u', label: 'Uber Eats',   color: '#06C167' },
+  { key: 'r', label: 'RocketNow', color: '#2979ff' },
+  { key: 'm', label: 'menu',   color: '#e91e8c' },
+];
+
+const WEATHERS = ['晴','曇','雨','雪','晴→雨','雨→晴','曇→雨'];
+const COND_ICONS = [
+  { val: 1, label: '😫 1' },
+  { val: 2, label: '😕 2' },
+  { val: 3, label: '😐 3' },
+  { val: 4, label: '🙂 4' },
+  { val: 5, label: '🔥 5' },
+];
+
+const MEMO_CATEGORIES = ['🛵稼働', '💡アイデア', '📌タスク', '📓日記'];
+
+function getNow() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+function getBusinessDateStr() {
+  const d = new Date();
+  if (d.getHours() < 4) { d.setDate(d.getDate() - 1); }
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatDateToParam(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function formatSmartAmt(amt) {
+  if (!amt || amt === 0) return '';
+  if (amt >= 10000) {
+    const man = (amt / 10000).toFixed(1);
+    return `${man.endsWith('.0') ? Math.floor(amt/10000) : man}万`;
+  }
+  return `¥${amt.toLocaleString()}`;
+}
+
+function calcDuration(start, end) {
+  if (!start || !end) return null;
+  const [sh, sm] = start.split(':').map(Number);
+  const [eh, em] = end.split(':').map(Number);
+  let diffMin = (eh * 60 + em) - (sh * 60 + sm);
+  if (diffMin < 0) diffMin += 24 * 60;
+  return { total: diffMin / 60, h: Math.floor(diffMin / 60), m: diffMin % 60 };
+}
+
+function loadInitialVault() {
+  const saved = localStorage.getItem(SK.db);
+  return saved ? JSON.parse(saved) : {};
+}
+
+function loadInitialDate() {
+  const saved = localStorage.getItem(SK.currentDate);
+  return saved || getBusinessDateStr();
+}
+
+function loadInitialGoals() {
+  const saved = localStorage.getItem(SK.goals);
+  return saved ? JSON.parse(saved) : {}; 
+}
+
+function loadInitialMemos() {
+  const saved = localStorage.getItem(SK.memos);
+  return saved ? JSON.parse(saved) : [];
+}
+
+function getYearWeekStr(dateStr) {
+  const d = new Date(dateStr);
+  const day = d.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+  const mon = new Date(d.getTime() + mondayOffset * 86400000);
+  const year = mon.getFullYear();
+  const startOfYear = new Date(year, 0, 1);
+  const weekNum = Math.ceil((((mon - startOfYear) / 86400000) + startOfYear.getDay() + 1) / 7);
+  return `${year}-W${String(weekNum).padStart(2,'0')}`;
+}
+
+const EXPENSE_CATEGORIES = ['燃料費', '車両整備・修理', '消耗品', '通信費', '保険料', '駐車・通行料', 'その他'];
+function expenseToday() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function validExpenseDate(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) && !isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value;
+}
+function cleanExpenses(items) {
+  if (!Array.isArray(items)) throw new Error('経費形式');
+  const ids = new Set();
+  return items.map(e => {
+    if (!e || typeof e.id !== 'string' || !e.id || ids.has(e.id) || !validExpenseDate(e.date) || !Number.isSafeInteger(e.amount) || e.amount <= 0 || e.amount > 999999999 || !EXPENSE_CATEGORIES.includes(e.category) || typeof e.payee !== 'string' || typeof e.memo !== 'string') throw new Error('経費形式');
+    ids.add(e.id);
+    return {id:e.id, date:e.date, amount:e.amount, category:e.category, payee:e.payee, memo:e.memo};
+  });
+}
+function parseExpenseReceipt(raw) {
+  const text = raw.normalize('NFKC');
+  const lines = text.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+  const match = text.match(/(20\d{2})\s*[年\/.-]\s*(\d{1,2})\s*[月\/.-]\s*(\d{1,2})/);
+  const date = match ? `${match[1]}-${match[2].padStart(2,'0')}-${match[3].padStart(2,'0')}` : '';
+  const totals = lines.filter(s => /合\s*計|総\s*額|お\s*支\s*払\s*い?\s*金\s*額|TOTAL/i.test(s) && !/小\s*計|税|対象/.test(s));
+  const values = totals.flatMap(s => {
+    const tail = s.replace(/^.*?(?:合\s*計|総\s*額|お\s*支\s*払\s*い?\s*金\s*額|TOTAL)/i, '');
+    const m = tail.match(/[¥￥]?\s*(\d[\d,]*)\s*円?/);
+    return m ? [Number(m[1].replace(/,/g,''))] : [];
+  }).filter(n => Number.isSafeInteger(n) && n > 0 && n <= 999999999);
+  const unique = [...new Set(values)];
+  return {date:validExpenseDate(date) ? date : '', amount:unique.length === 1 ? String(unique[0]) : ''};
+}
+let expenseOCRLoader;
+function loadExpenseOCR() {
+  if (window.Tesseract) return Promise.resolve(window.Tesseract);
+  if (!expenseOCRLoader) expenseOCRLoader = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    const timer = setTimeout(() => {script.remove(); expenseOCRLoader = null; reject(new Error('読込タイムアウト'));}, 30000);
+    script.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js';
+    script.onload = () => {clearTimeout(timer); resolve(window.Tesseract);};
+    script.onerror = () => {clearTimeout(timer); script.remove(); expenseOCRLoader = null; reject(new Error('読込失敗'));};
+    document.head.appendChild(script);
+  });
+  return expenseOCRLoader;
+}
+async function expenseImageCanvas(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    await new Promise((resolve,reject) => {img.onload=resolve; img.onerror=reject; img.src=url;});
+    const scale = Math.min(1, 2200 / Math.max(img.naturalWidth,img.naturalHeight));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1,Math.round(img.naturalWidth*scale)); canvas.height = Math.max(1,Math.round(img.naturalHeight*scale));
+    const ctx = canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    return canvas;
+  } finally {URL.revokeObjectURL(url);}
+}
+
+function buildExpenseFreeeCSV(rows, settings, account) {
+  const quote = value => '"' + String(value ?? '').replace(/"/g, '""') + '"';
+  const header = ['収支区分','管理番号','発生日','決済期日','取引先コード','取引先','勘定科目','税区分','金額','税計算区分','税額','備考','品目','部門','メモタグ','決済日','決済口座','決済金額'];
+  const records = cleanExpenses(rows).sort((a,b)=>a.date.localeCompare(b.date)).map(e => {
+    const config = settings[e.id];
+    if (!config?.subject?.trim() || !config?.tax?.trim()) throw new Error('各経費の勘定科目と税区分を入力してください。');
+    const date = e.date.replace(/-/g,'/');
+    return ['支出',e.id,date,'','',e.payee,config.subject.trim(),config.tax.trim(),e.amount,'税込','',e.memo,'','','',account.trim() ? date : '',account.trim(),account.trim() ? e.amount : ''];
+  });
+  return '\uFEFF' + [header,...records].map(row=>row.map(quote).join(',')).join('\r\n') + '\r\n';
+}
+
+function ExpenseView({expenses, onSave, loadError}) {
+  const empty = () => ({id:'',date:expenseToday(),amount:'',category:'その他',payee:'',memo:''});
+  const [form,setForm] = useState(empty);
+  const [exportOpen,setExportOpen] = useState(false);
+  const [exportSettings,setExportSettings] = useState({});
+  const [exportAccount,setExportAccount] = useState('');
+  const [exportError,setExportError] = useState('');
+  const [mode,setMode] = useState('month');
+  const [month,setMonth] = useState(() => expenseToday().slice(0,7));
+  const [year,setYear] = useState(() => expenseToday().slice(0,4));
+  const [category,setCategory] = useState('すべて');
+  const [busy,setBusy] = useState(false);
+  const [status,setStatus] = useState('');
+  const [raw,setRaw] = useState('');
+  const lock = React.useRef(false);
+  const field = (key,value) => setForm(prev => ({...prev,[key]:value}));
+  const rows = expenses.filter(e => (mode === 'all' || e.date.startsWith(mode === 'month' ? month : year)) && (category === 'すべて' || e.category === category)).sort((a,b)=>b.date.localeCompare(a.date));
+  const total = rows.reduce((sum,e)=>sum+e.amount,0);
+  const openExport = () => {
+    const subjects = {'燃料費':'車両費','車両整備・修理':'修繕費','消耗品':'消耗品費','通信費':'通信費','保険料':'保険料','駐車・通行料':'旅費交通費','その他':'雑費'};
+    setExportSettings(prev=>Object.fromEntries(rows.map(e=>[e.id,prev[e.id] || {subject:subjects[e.category],tax:''}])));
+    setExportError(''); setExportOpen(true);
+  };
+  const exportCSV = () => {
+    try {
+      if (!rows.length) throw new Error('出力対象の経費がありません。');
+      const csv = buildExpenseFreeeCSV(rows,exportSettings,exportAccount);
+      const blob = new Blob([csv],{type:'text/csv;charset=utf-8'});
+      if (blob.size > 5000000) throw new Error('5MBを超えるため、集計期間を短くして出力してください。');
+      const url = URL.createObjectURL(blob), link = document.createElement('a');
+      link.href=url; link.download='freee_expenses_'+(mode==='all' ? 'all' : mode==='month' ? month : year)+'.csv';
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1000);
+      setExportError('CSVを出力しました。経費の記録はそのまま残っています。');
+    } catch (error) {setExportError(error.message);}
+  };
+  const reset = () => {setForm(empty()); setRaw(''); setStatus('');};
+  const save = event => {
+    event.preventDefault();
+    if (busy || loadError) return;
+    const item = {...form, id:form.id || (window.crypto?.randomUUID ? window.crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`), amount:Number(form.amount)};
+    try {cleanExpenses([item]);} catch {setStatus('日付と1〜999,999,999円の整数金額を確認してください。'); return;}
+    if (form.id && !expenses.some(e=>e.id===form.id)) {setStatus('編集中の記録が見つかりません。「入力をクリア」して再入力してください。'); return;}
+    const next = form.id ? expenses.map(e=>e.id===form.id ? item : e) : [...expenses,item];
+    if (onSave(next)) {reset(); setMonth(item.date.slice(0,7)); setYear(item.date.slice(0,4)); setCategory('すべて'); setStatus('経費を保存しました。');}
+  };
+  const scan = async event => {
+    const file = event.target.files?.[0]; event.target.value='';
+    if (!file || lock.current) return;
+    if (file.size > 25*1024*1024) {setStatus('写真は25MB以下を選んでください。');return;}
+    lock.current=true; setBusy(true); setRaw(''); setStatus('読み取りを準備しています…');
+    let worker, canvas, timer, finished = false;
+    try {
+      const task = async () => {
+        const engine = await loadExpenseOCR();
+        if (finished) return;
+        canvas = await expenseImageCanvas(file);
+        if (finished) {canvas.width=0;canvas.height=0;return;}
+        worker = await engine.createWorker('jpn+eng', 1, {
+          workerPath:'https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js',
+          corePath:'https://cdn.jsdelivr.net/npm/tesseract.js-core@6.0.0',
+          logger:m=>{if(!finished) setStatus(m.status==='recognizing text' ? `読み取り中… ${Math.round(m.progress*100)}%` : '読み取り用データを準備しています…');}
+        });
+        if (finished) {await worker.terminate();return;}
+        return worker.recognize(canvas);
+      };
+      const result = await Promise.race([task(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('timeout')),120000);})]);
+      const text = result?.data?.text || '';
+      setRaw(text);
+      const parsed = parseExpenseReceipt(text);
+      // Never retain a previous receipt's date/amount when recognition misses them.
+      setForm(prev=>({...prev,date:parsed.date,amount:parsed.amount}));
+      setStatus(text.trim() ? '読み取りました。日付・合計金額を確認し、支払先・分類などを入力して保存してください。空欄は手入力してください。' : '文字を読み取れませんでした。撮り直すか手入力してください。');
+    } catch {setStatus('写真を読み取れませんでした。通信や画像形式を確認して再試行するか、手入力してください。');}
+    finally {finished=true; clearTimeout(timer); lock.current=false; if(worker) await worker.terminate().catch(()=>{}); if(canvas){canvas.width=0;canvas.height=0;} setBusy(false);}
+  };
+  return <>
+    <h2 class="section-title">🧾 経費の記録・集計</h2>
+    {loadError && <p role="alert">{loadError}</p>}
+    <form class="card" onSubmit={save} id="expense-form">
+      <h3 style={{marginBottom:16}}>{form.id ? '経費を編集' : '経費を追加'}</h3>
+      <fieldset disabled={busy || !!loadError} style={{border:0,minWidth:0}}>
+        <div class="grid-2" style={{marginBottom:12}}>
+          <label class="add-btn" style={{textAlign:'center',fontSize:16}}>📷 撮影する<input aria-label="レシートを撮影" type="file" accept="image/*" capture="environment" onChange={scan} style={{display:'none'}} /></label>
+          <label class="add-btn" style={{textAlign:'center',fontSize:16}}>写真を選ぶ<input aria-label="レシート写真を選択" type="file" accept="image/*" onChange={scan} style={{display:'none'}} /></label>
+        </div>
+        <p style={{color:'var(--muted2)',fontSize:14,marginBottom:16}}>写真は端末内で読み取り、保存・送信しません。初回は読み取り用データの取得に時間がかかります。</p>
+        <div class="expense-date-amount" style={{marginBottom:12}}>
+          <label>日付<input aria-label="経費の日付" type="date" required value={form.date} onChange={e=>field('date',e.target.value)} /></label>
+          <label>金額（円）<input aria-label="経費の金額" type="number" inputMode="numeric" min="1" max="999999999" step="1" required value={form.amount} onChange={e=>field('amount',e.target.value)} /></label>
+        </div>
+        <label>分類<select aria-label="経費の分類" value={form.category} onChange={e=>field('category',e.target.value)}>{EXPENSE_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></label>
+        <label>支払先<input aria-label="経費の支払先" maxLength="200" placeholder="店舗名など" value={form.payee} onChange={e=>field('payee',e.target.value)} /></label>
+        <label>メモ<textarea aria-label="経費のメモ" maxLength="2000" rows="2" value={form.memo} onChange={e=>field('memo',e.target.value)} /></label>
+        <button class="gen-btn" type="submit" style={{marginTop:12}}>{form.id ? '変更を保存' : '経費を保存'}</button>
+        <button class="add-btn" type="button" style={{marginTop:8,padding:12}} onClick={reset}>{form.id ? '編集をキャンセル' : '入力をクリア'}</button>
+      </fieldset>
+      <p role="status" style={{lineHeight:1.7,marginTop:12}}>{status}</p>
+      {raw && <details style={{marginTop:12}}><summary>読み取った文字を確認</summary><pre style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere',fontSize:14,marginTop:12}}>{raw}</pre></details>}
+    </form>
+    <div class="card">
+      <h3 style={{marginBottom:12}}>経費の集計</h3>
+      <div class="grid-2">
+        <label>集計期間<select aria-label="経費の集計期間" value={mode} onChange={e=>setMode(e.target.value)}><option value="month">月別</option><option value="year">年別</option><option value="all">全期間</option></select></label>
+        {mode==='month' && <label>対象月<input aria-label="経費の対象月" type="month" value={month} onChange={e=>setMonth(e.target.value)} /></label>}
+        {mode==='year' && <label>対象年<input aria-label="経費の対象年" type="number" min="2000" max="9999" value={year} onChange={e=>setYear(e.target.value)} /></label>}
+      </div>
+      <label>分類で絞り込み<select aria-label="経費の絞り込み" value={category} onChange={e=>setCategory(e.target.value)}>{['すべて',...EXPENSE_CATEGORIES].map(c=><option key={c}>{c}</option>)}</select></label>
+      <p style={{fontSize:28,color:'var(--accent)',fontWeight:900,margin:'16px 0'}} data-testid="expense-total">{total.toLocaleString()} 円 <small style={{fontSize:16}}>／ {rows.length}件</small></p>
+      {EXPENSE_CATEGORIES.map(c=>{const list=rows.filter(e=>e.category===c);return list.length>0 && <div key={c} style={{display:'flex',justifyContent:'space-between',gap:12,padding:'8px 0',borderTop:'1px solid var(--border)'}}><span>{c}</span><strong>{list.reduce((s,e)=>s+e.amount,0).toLocaleString()} 円</strong></div>;})}
+    </div>
+    <div class="card">
+      <button class="gen-btn" disabled={!rows.length || !!loadError} onClick={openExport}>freee用CSVをエクスポート（{rows.length}件）</button>
+      <p style={{fontSize:14,lineHeight:1.7,marginTop:10}}>現在の集計期間・分類で絞り込んだ経費を出力します。</p>
+      {exportOpen && <div style={{marginTop:16}}>
+        <p style={{fontSize:14,lineHeight:1.7}}>勘定科目は分類からの候補です。各明細の科目・税区分をfreeeの設定に合わせて確認してください。金額は税込として出力します。</p>
+        <label style={{marginTop:12}}>決済口座（任意）
+          <input aria-label="CSV決済口座" placeholder="空欄：未決済／入力例：現金" value={exportAccount} onChange={e=>setExportAccount(e.target.value)} />
+        </label>
+        <p style={{fontSize:14,lineHeight:1.7}}>空欄なら未決済として出力します。口座を入力すると全件を記録日付で決済済みとして出力します。支払方法が異なる場合は空欄で出力し、freeeで決済を登録してください。</p>
+        {rows.map(e=><div key={e.id} style={{borderTop:'1px solid var(--border)',marginTop:16,paddingTop:12}}>
+          <p style={{marginBottom:8,overflowWrap:'anywhere'}}>{e.date} ／ {e.payee || e.category} ／ {e.amount.toLocaleString()}円</p>
+          <label>勘定科目<input aria-label={'CSV勘定科目 '+e.id} value={exportSettings[e.id]?.subject || ''} onChange={v=>setExportSettings(prev=>({...prev,[e.id]:{...prev[e.id],subject:v.target.value}}))}/></label>
+          <label>税区分<input aria-label={'CSV税区分 '+e.id} placeholder="freee上の税区分名を入力" value={exportSettings[e.id]?.tax || ''} onChange={v=>setExportSettings(prev=>({...prev,[e.id]:{...prev[e.id],tax:v.target.value}}))}/></label>
+        </div>)}
+        <p style={{fontSize:14,lineHeight:1.7,margin:'12px 0'}}>同じ経費を再インポートすると重複登録されます。freeeの「取引データのインポート」で読み込んでください。</p>
+        <button class="gen-btn" disabled={!rows.length || !!loadError} onClick={exportCSV}>確認してCSVをダウンロード</button>
+        <p role="status" style={{marginTop:10}}>{exportError}</p>
+        <button class="add-btn" style={{marginTop:10,padding:12}} onClick={()=>setExportOpen(false)}>出力設定を閉じる</button>
+      </div>}
+    </div>
+    <h3 class="section-title">経費一覧</h3>
+    {!rows.length && <p style={{padding:20,color:'var(--muted2)'}}>この期間・分類の経費はありません。</p>}
+    {rows.map(e=><div class="card" key={e.id} style={{overflowWrap:'anywhere'}}>
+      <div style={{display:'flex',justifyContent:'space-between',gap:12}}><span>{e.date}<br/>{e.category}</span><strong style={{fontSize:22}}>{e.amount.toLocaleString()} 円</strong></div>
+      {e.payee && <p style={{marginTop:10}}>{e.payee}</p>}{e.memo && <p style={{whiteSpace:'pre-wrap',marginTop:8,color:'var(--muted2)'}}>{e.memo}</p>}
+      <div class="grid-2" style={{marginTop:12}}>
+        <button class="stamp-btn secondary" disabled={busy} onClick={()=>{setForm({...e,amount:String(e.amount)});setRaw('');setStatus('');document.getElementById('expense-form').scrollIntoView({behavior:'smooth',block:'start'});}}>編集</button>
+        <button class="stamp-btn secondary" disabled={busy || !!loadError} onClick={()=>{if(confirm(`${e.date} ${e.amount.toLocaleString()}円の経費を削除しますか？`) && onSave(expenses.filter(x=>x.id!==e.id))) {if(form.id===e.id) reset();setStatus('削除しました。');}}}>削除</button>
+      </div>
+    </div>)}
+  </>;
+}
+
+/* ────────────────── MAIN APP ────────────────── */
+// Planning is deliberately separate from accounting records.
+const PLAN_KEY = 'delivery_log_planning_v15';
+const pn = v => Math.max(0, Number(v) || 0);
+function pdate(s, offset=0) { const d=new Date(s+'T12:00:00'); d.setDate(d.getDate()+offset); return formatDateToParam(d); }
+function pdays(a,b) { const out=[]; for(let d=a;d<=b;d=pdate(d,1)) { out.push(d); if(out.length>370) throw Error('期間が長すぎます'); } return out; }
+function prange(date,kind) {
+  if(kind==='month') {const [y,m]=date.split('-').map(Number);return [date.slice(0,7)+'-01',formatDateToParam(new Date(y,m,0,12))];}
+  const wd=new Date(date+'T12:00:00').getDay(); const mon=pdate(date,-((wd+6)%7));return [mon,pdate(mon,6)];
+}
+function pdefault() { return {quests:[],days:{},models:['閑散期','通常期','繁忙期'].map(name=>({name,u:'',d:'',uph:''})),model:1,calc:{u:'',d:'',uph:'',company:'u',share:100},scenarios:[0,5,10]}; }
+function pvalidate(p) {
+  const obj=v=>v&&typeof v==='object'&&!Array.isArray(v);
+  const number=v=>v===''||(Number.isFinite(Number(v))&&Number(v)>=0);
+  const day=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)&&pdate(v)===v;
+  if(!obj(p)||!Array.isArray(p.quests)||!obj(p.days)||!Array.isArray(p.models)||p.models.length!==3||!obj(p.calc)||!Array.isArray(p.scenarios)||p.scenarios.length!==3) throw Error('計画データの形式が違います');
+  if(!['u','d','both'].includes(p.calc.company)||!['u','d','uph','share'].every(k=>number(p.calc[k]))||pn(p.calc.share)>100||!Number.isInteger(p.model)||p.model<0||p.model>2||!p.scenarios.every(v=>number(v)&&Number.isInteger(Number(v)))||Number(p.scenarios[0])!==0) throw Error('計算条件が不正です');
+  if(!p.models.every(m=>obj(m)&&typeof m.name==='string'&&['u','d','uph'].every(k=>number(m[k])))) throw Error('モデルが不正です');
+  const ids=new Set();
+  for(const q of p.quests) {
+    if(!obj(q)||typeof q.id!=='string'||ids.has(q.id)||!day(q.start)||!day(q.end)||q.end<q.start||pdays(q.start,q.end).length>4||!['n','base','extra'].includes(q.aim)||!['n','base','extra'].includes(q.finish)||!['n','base','extra','miss'].includes(q.status)||!['count','base','extra','adjust'].every(k=>number(q[k]))||pn(q.count)<10||pn(q.count)>120||pn(q.count)%10||!Array.isArray(q.links)) throw Error('クエスト条件が不正です');
+    ids.add(q.id);
+    for(const l of q.links) if(!obj(l)||!day(l.date)||!number(l.amount)) throw Error('報酬紐付けが不正です');
+  }
+  for(const [d,v] of Object.entries(p.days)) if(!day(d)||!obj(v)||!['auto','off','amt','cnt'].includes(v.mode)||!number(v.value)) throw Error('日別計画が不正です');
+  const ordered=[...p.quests].sort((a,b)=>a.start.localeCompare(b.start));
+  for(let i=1;i<ordered.length;i++) if(ordered[i].start<=ordered[i-1].end) throw Error('日跨ぎクエストの期間が重複しています');
+  return p;
+}
+function pload() { try {const raw=localStorage.getItem(PLAN_KEY); return {data:raw?pvalidate(JSON.parse(raw)):pdefault(),error:''};} catch(e){return {data:pdefault(),error:'計画データを読み込めません。バックアップから復元してください。'};} }
+function pday(vault,date) {
+  const day=vault[date]||{}, s=(day.sets||[]).slice(-1)[0]||{};
+  const pf=k=>({amt:pn(s[k+'_cum']),cnt:pn(s[k+'_cnt_cum']),que:pn(s[k+'_que_cum'])});
+  const u=pf('u'),d=pf('d'),all=['u','d','r','m'].map(pf);
+  return {u,d,real:all.reduce((a,x)=>a+x.amt,0),cnt:all.reduce((a,x)=>a+x.cnt,0),que:all.reduce((a,x)=>a+x.que,0),hours:(day.sets||[]).reduce((a,x)=>a+(calcDuration(x.start,x.end)?.total||0),0)};
+}
+function preward(q,c) {return c<pn(q.count)?0:pn(q.base)+(c>=pn(q.count)+10?pn(q.extra):0);}
+function pprogress(vault,q,date,extraU=0) {return Math.max(0,pdays(q.start,q.end).filter(d=>d<=date).reduce((a,d)=>a+pday(vault,d).u.cnt,0)-pn(q.adjust)+(date>=q.start&&date<=q.end?extraU:0));}
+function pbudget(q) {if(q.status==='miss'||q.aim==='n')return 0;const stage=q.status==='n'?q.aim:q.status;return pn(q.base)+(stage==='extra'?pn(q.extra):0);}
+function pallocation(q,date) {if(date<q.start||date>q.end)return 0;const days=pdays(q.start,q.end),n=pbudget(q),part=Math.floor(n/days.length);return date===q.end?n-part*(days.length-1):part;}
+function plinkCheck(p,vault) {
+  const sums={};for(const q of p.quests)for(const l of q.links)sums[l.date]=(sums[l.date]||0)+pn(l.amount);
+  for(const [d,n] of Object.entries(sums))if(n>pday(vault,d).u.que) return d+'：紐付け額がUberの記録済みクエスト報酬を超えています';return '';
+}
+function pamount(vault,p,date) {
+  const day=pday(vault,date),links=p.quests.flatMap(q=>q.links).filter(l=>l.date===date).reduce((a,l)=>a+pn(l.amount),0);
+  return day.real+day.que-links+p.quests.reduce((a,q)=>a+pallocation(q,date),0);
+}
+function pmix(c,n) {const u=c.company==='u'?n:c.company==='d'?0:Math.round(n*pn(c.share)/100);return {u,d:n-u,amt:u*pn(c.u)+(n-u)*pn(c.d)};}
+function pready(c) {return (c.company==='u'?pn(c.u)>0:c.company==='d'?pn(c.d)>0:(pn(c.share)===0||pn(c.u)>0)&&(pn(c.share)===100||pn(c.d)>0));}
+function punit(c) {return c.company==='u'?pn(c.u):c.company==='d'?pn(c.d):pn(c.u)*pn(c.share)/100+pn(c.d)*(1-pn(c.share)/100);}
+function pneed(c,amt) {
+  if(amt<=0)return 0;if(!pready(c))return null;
+  let lo=0,hi=Math.ceil(amt/Math.min(...[c.company!=='d'?pn(c.u):Infinity,c.company!=='u'?pn(c.d):Infinity].filter(n=>n>0)))+2;
+  // Rounding the company split may briefly flatten earnings, but never reduces it with positive fares.
+  while(lo<hi){let m=Math.floor((lo+hi)/2);if(pmix(c,m).amt>=amt)hi=m;else lo=m+1;}return lo;
+}
+function pgoal(goals,date,kind){const key=kind==='week'?'W-'+getYearWeekStr(date):'M-'+date.slice(0,7);const v=goals[key];return pn(typeof v==='object'?v?.amt:v);}
+function pfixed(p,date) {const v=p.days[date];if(v?.mode==='amt')return pn(v.value);if(v?.mode==='cnt')return pmix(p.calc,pn(v.value)).amt+p.quests.reduce((a,q)=>a+pallocation(q,date),0);return null;}
+function pdistribute(vault,goals,p,date,kind,includeToday,extra=0) {
+  const [start,end]=prange(date,kind),goal=pgoal(goals,date,kind);
+  const prior=pdays(start,end).filter(d=>includeToday?d<date:d<=date).reduce((a,d)=>a+pamount(vault,p,d),0)+extra;
+  const future=pdays(start,end).filter(d=>(includeToday?d>=date:d>date)&&p.days[d]?.mode!=='off');
+  const fixed=future.filter(d=>pfixed(p,d)!==null),free=future.filter(d=>pfixed(p,d)===null);
+  const remain=Math.max(0,goal-prior),reserved=fixed.reduce((a,d)=>a+pfixed(p,d),0),daily=free.length?Math.ceil(Math.max(0,remain-reserved)/free.length):0;
+  return {goal,remain,daily,future,fixed,free,unallocated:free.length===0?Math.max(0,remain-reserved):0,amountFor:d=>pfixed(p,d)??daily};
+}
+function pscenario(vault,p,date,n) {
+  const mix=pmix(p.calc,n);
+  const next={...p,quests:p.quests.map(q=>{
+    if(date<q.start||date>q.end||(q.finish==='n'&&date!==q.end))return q;
+    const c=pprogress(vault,q,date,mix.u),r=preward(q,c);
+    return {...q,status:r===0?'miss':c>=pn(q.count)+10?'extra':'base'};
+  })};
+  return {mix,p:next,landing:pamount(vault,next,date)+mix.amt};
+}
+function psolve(vault,p,date,target) {
+  if(pscenario(vault,p,date,0).landing>=target)return 0;
+  if(!pready(p.calc)||punit(p.calc)<=0)return null;
+  let hi=1;while(hi<1000000&&pscenario(vault,p,date,hi).landing<target)hi*=2;
+  if(pscenario(vault,p,date,hi).landing<target)return null;
+  let lo=0;while(lo<hi){let m=Math.floor((lo+hi)/2);if(pscenario(vault,p,date,m).landing>=target)hi=m;else lo=m+1;}return lo;
+}
+function psummary(vault,goals,p,date) {
+  const w=pdistribute(vault,goals,p,date,'week',true),m=pdistribute(vault,goals,p,date,'month',true),manual=pfixed(p,date),g=goals['D-'+date],old=pn(typeof g==='object'?g?.amt:g);
+  const target=p.days[date]?.mode==='off'?0:manual??(old||Math.max(w.goal?w.amountFor(date):0,m.goal?m.amountFor(date):0));
+  const actual=pamount(vault,p,date),remain=Math.max(0,target-actual),need=psolve(vault,p,date,target);
+  return {w,m,target,actual,remain,need,manual:manual!==null||old>0};
+}
+function ptime(cnt,uph){if(cnt===null||pn(uph)<=0)return '未設定';const min=Math.ceil(cnt/pn(uph)*60);return Math.floor(min/60)+'時間'+min%60+'分';}
+function Planner({view,vault,goals,date,p,onChange,navigate,error}) {
+  const [mode,setMode]=useState('cnt'),[money,setMoney]=useState(''),[editDate,setEditDate]=useState(date);
+  const [questPart,setQuestPart]=useState('front');
+  const [notice,setNotice]=useState('');
+  useEffect(()=>setEditDate(date),[date]);
+  const change=next=>{try{pvalidate(next);onChange(next);setNotice('');}catch(e){setNotice(e.message);}};
+  const calc=(k,v)=>change({...p,calc:{...p.calc,[k]:v}});
+  const day=pday(vault,date),sum=psummary(vault,goals,p,date),linkError=plinkCheck(p,vault),blocked=error||linkError;
+  const active=p.quests.filter(q=>date>=q.start&&date<=q.end);
+  const yen=n=>Math.round(n).toLocaleString()+'円';
+  const field=(label,value,onChange,opts={})=><label>{label}<input type="number" min="0" step="any" value={value} onChange={e=>onChange(e.target.value)} {...opts}/></label>;
+  const qchange=(id,k,v)=>change({...p,quests:p.quests.map(q=>q.id===id?{...q,[k]:v}:q)});
+  const dayChange=(k,v)=>change({...p,days:{...p.days,[editDate]:{mode:'auto',value:'',...p.days[editDate],[k]:v}}});
+  const addQuest=()=>{const [mon]=prange(date,'week');const start=questPart==='front'?mon:pdate(mon,4),end=pdate(start,questPart==='front'?3:2);change({...p,quests:[...p.quests,{id:start,start,end,count:120,base:'',extra:'',adjust:0,aim:'base',finish:'n',status:'n',links:[]}]});};
+  const listDates=pdays(date,prange(date,'month')[1]>prange(date,'week')[1]?prange(date,'month')[1]:prange(date,'week')[1]);
+  const resultCard=(n,i)=>{
+    const mix=pmix(p.calc,n),qdata=active.map(q=>({q,c:pprogress(vault,q,date,mix.u)}));
+    const simulated=pscenario(vault,p,date,n).p;
+    const qDelta=simulated.quests.reduce((a,q)=>a+pallocation(q,date),0)-p.quests.reduce((a,q)=>a+pallocation(q,date),0);
+    const ds=pday(vault,date),hours=pn(p.calc.uph)>0?ds.hours+n/pn(p.calc.uph):null;
+    return <div className="card" key={i}><h3>{n===0?'今終了':`あと${n}件`}</h3>{mode==='cnt'&&i>0&&field('追加件数',p.scenarios[i],v=>change({...p,scenarios:p.scenarios.map((x,j)=>i===j?v:x)}),{step:1})}
+      <p>Uber {mix.u}件 ／ 出前館 {mix.d}件</p><p>通常売上 ＋{yen(mix.amt)}</p><strong>今日の計画着地 {yen(pamount(vault,simulated,date)+mix.amt)}</strong>
+      <p>追加時間 {ptime(n,p.calc.uph)}</p><p>通常平均単価 {ds.cnt+n?yen((ds.real+mix.amt)/(ds.cnt+n)):'—'}</p><p>着地時給（計画配分込） {hours>0?yen((pamount(vault,simulated,date)+mix.amt)/hours):'—'}</p>
+      {qdata.map(({q,c})=><p key={q.id}>Uberクエスト {c}件 ／ 基本まで{Math.max(0,pn(q.count)-c)}件 ／ 追加まで{Math.max(0,pn(q.count)+10-c)}件<br/>ここで期間終了なら報酬 {yen(preward(q,c))}<br/>{(()=>{const days=pdays(q.start,q.end).filter(d=>d>date&&p.days[d]?.mode!=='off');const remain=Math.max(0,pn(q.count)+(q.aim==='extra'?10:0)-c);return days.length?'期限まで残り'+days.length+'稼働日：Uber '+Math.ceil(remain/days.length)+'件/日（全体UPH換算の参考 '+ptime(Math.ceil(remain/days.length),p.calc.uph)+'）':remain?'期限内に残りUber '+remain+'件':'狙う回数に到達';})()}</p>)}
+      {['week','month'].map(kind=>{const r=pdistribute(vault,goals,simulated,date,kind,false,mix.amt);return <div key={kind}><h4>{kind==='week'?'週間':'月間'}：明日以降</h4>{r.goal?<><p>残り{yen(r.remain)} ／ 稼働予定{r.future.length}日</p>{r.unallocated>0&&<p>未配分 {yen(r.unallocated)}</p>}{r.future.map(d=>{const amt=r.amountFor(d),alloc=simulated.quests.reduce((a,q)=>a+pallocation(q,d),0),nc=pneed(p.calc,Math.max(0,amt-alloc));return <p key={d}>{d.slice(5)}：{yen(amt)}・{nc===null?'件数未設定':nc+'件'}・{ptime(nc,p.calc.uph)}</p>;})}</>:<p>目標未設定</p>}</div>;})}
+      {qDelta!==0&&<p>期間終了条件による当日配分差 {yen(qDelta)}</p>}
+    </div>;
+  };
+  if(!['dashboard','simulator','goals','settings'].includes(view))return null;
+  return <section className={'planner '+(view==='dashboard'?'planner-home':'view-container active')}>
+    {(view==='goals'||view==='simulator')&&<button className="gen-btn" onClick={()=>navigate('dashboard')}>← ホームへ</button>}
+    {(notice||blocked)&&<p role="alert" style={{color:'var(--yellow)'}}>{notice||blocked}</p>}
+    {view==='dashboard'&&(()=>{
+      const hasGoal=sum.target>0||sum.manual;
+      const cntGoal=pn(goals['D-'+date]?.cnt);
+      const percent=hasGoal&&sum.target>0?Math.min(100,Math.round(sum.actual/sum.target*100)):0;
+      return <div className="card today-card">
+        <div className="today-heading"><div><span className="today-eyebrow">TODAY / PLAN</span><h3>今日のゴール</h3></div><span className="today-date">{date.slice(5).replace('-',' / ')}</span></div>
+        <div className="today-basis">クエスト達成時の報酬を含む計画</div>
+        {!blocked&&<>
+          <div className="today-hero"><span>{hasGoal?(sum.remain>0?'目標まであと':'売上目標クリア'):'売上目標'}</span><div className={'today-amount '+(!hasGoal?'is-empty':'')}>{hasGoal?<>{Math.round(sum.remain).toLocaleString()}<small>円</small></>:'未設定'}</div></div>
+          {hasGoal?<><div className="today-track"><span style={{width:percent+'%'}}/></div><div className="today-target"><span>{sum.manual?'設定した目標':'自動計算の目標'}</span><strong>{yen(sum.target)}</strong></div></>:<p className="today-empty">週・月の目標を設定すると、今日の必要量を計算します。</p>}
+          <div className="today-metrics"><div><span>必要件数</span><strong>{!hasGoal?'—':sum.need===null?'単価未設定':<>{sum.need}<small>件</small></>}</strong></div><div><span>必要時間</span><strong>{!hasGoal?'—':sum.need===0?'0分':ptime(sum.need,p.calc.uph)}</strong></div></div>
+          {cntGoal>0&&<div className="today-target"><span>今日の件数目標まで</span><strong>あと {Math.max(0,cntGoal-day.cnt)}件</strong></div>}
+          {active.map(q=>{const c=pprogress(vault,q,date),target=pn(q.count)+(q.aim==='extra'?10:0),left=Math.max(0,target-c);return <div className="today-quest" key={q.id}><div className="today-quest-head"><span><i/>Uber Eats クエスト</span><strong>{q.aim==='n'?'計画対象外':left?'あと '+left+'件':'目標回数に到達'}</strong></div><div className="today-quest-progress"><strong>{c}<small> / {target}件</small></strong><span>{q.aim==='extra'?'追加10回まで':q.aim==='n'?'未選択':'基本回数まで'}</span></div><div className="today-track quest-track"><span style={{width:Math.min(100,target?c/target*100:0)+'%'}}/></div><div className="today-quest-foot">期限 {pdate(q.end,1).slice(5).replace('-','/')} 04:00</div></div>;})}
+        </>}
+        <div className="today-actions"><button className="gen-btn" onClick={()=>navigate('simulator')}>逆算する <span>↗</span></button><button className="today-edit" onClick={()=>navigate('goals')}>目標を設定・編集</button></div>
+      </div>;
+    })()}
+    {view==='goals'&&<><h2>目標管理</h2><p>上の期間切替で日・週・月・年の目標を編集できます。</p><div className="card"><h3>日別の稼働予定</h3><label>対象日<input type="date" value={editDate} onChange={e=>{if(e.target.value)setEditDate(e.target.value);}}/></label><select value={p.days[editDate]?.mode||'auto'} onChange={e=>dayChange('mode',e.target.value)}><option value="auto">自動配分</option><option value="off">休み</option><option value="amt">売上を指定（配分込）</option><option value="cnt">件数を指定</option></select>{['amt','cnt'].includes(p.days[editDate]?.mode)&&field('指定値',p.days[editDate]?.value||'',v=>dayChange('value',v))}<p>件数指定は逆算の会社・単価条件を使用します。</p><details><summary>今後の予定一覧</summary>{listDates.map(d=><p key={d}><button onClick={()=>setEditDate(d)}>{d}</button> {p.days[d]?.mode||'auto'} {p.days[d]?.value||''}</p>)}</details></div>
+    <div className="card"><h3>Uber Eats 日跨ぎクエスト</h3><p>開始日の04:00〜最終営業日の翌日04:00（日本時間）。選んだ候補だけ登録します。</p><select value={questPart} onChange={e=>setQuestPart(e.target.value)}><option value="front">選択週の前半（月〜木）</option><option value="back">選択週の後半（金〜日）</option></select><button className="gen-btn" onClick={addQuest}>クエストを登録</button></div>
+    {p.quests.map(q=><div className="card" key={q.id}><h3>{q.start} 〜 {q.end}</h3><p>終了：{pdate(q.end,1)} 04:00</p><label>Uber側で選択した回数<select value={q.count} onChange={e=>qchange(q.id,'count',Number(e.target.value))}>{Array.from({length:12},(_,i)=>(i+1)*10).map(n=><option key={n} value={n}>{n}回</option>)}</select></label>{field('基本達成報酬（円）',q.base,v=>qchange(q.id,'base',v))}{field('追加10回の報酬（円）',q.extra,v=>qchange(q.id,'extra',v))}<label>狙う段階<select value={q.aim} onChange={e=>qchange(q.id,'aim',e.target.value)}><option value="n">計画に含めない／未選択</option><option value="base">基本回数まで</option><option value="extra">追加10回まで</option></select></label><p>Uber実績 {pprogress(vault,q,date)}件 ／ 計画報酬 {yen(pbudget(q))}</p>
+    {field('対象外件数（Uber累計から控除）',q.adjust,v=>qchange(q.id,'adjust',v),{step:1})}
+    <label>期間終了後の結果<select value={q.status} onChange={e=>qchange(q.id,'status',e.target.value)}><option value="n">計画中</option><option value="base">基本達成</option><option value="extra">追加達成</option><option value="miss">未達</option></select></label><details><summary>実績に入力済みの日跨ぎ報酬を紐付ける</summary><p>入力済みUberクエスト報酬のうち、このクエスト分だけを指定。計画での重複を除きます。</p>{q.links.map((l,i)=><div key={i}><input type="date" value={l.date} onChange={e=>e.target.value&&qchange(q.id,'links',q.links.map((v,j)=>i===j?{...v,date:e.target.value}:v))}/>{field('記録済み金額',l.amount,v=>qchange(q.id,'links',q.links.map((l,j)=>i===j?{...l,amount:v}:l)))}<button onClick={()=>qchange(q.id,'links',q.links.filter((_,j)=>i!==j))}>紐付け解除</button></div>)}<button onClick={()=>qchange(q.id,'links',[...q.links,{date,amount:0}])}>紐付けを追加</button></details><button className="del-btn" onClick={()=>{if(confirm('このクエスト設定を削除しますか？実績は保持します。'))change({...p,quests:p.quests.filter(v=>v.id!==q.id)});}}>設定を削除</button></div>)}</>}
+    {view==='simulator'&&<><h2>逆算シミュレーター</h2><p>{date} ／ クエスト達成前提・配分込</p><div className="card"><label>追加配達の会社<select value={p.calc.company} onChange={e=>calc('company',e.target.value)}><option value="u">Uber中心（追加はUber）</option><option value="d">出前館中心（追加は出前館）</option><option value="both">両方</option></select></label>{p.calc.company==='both'&&field('Uber件数比率（%）',p.calc.share,v=>calc('share',v),{max:100})}<div className="grid-2">{field('Uber通常単価（円）',p.calc.u,v=>calc('u',v))}{field('出前館通常単価（円）',p.calc.d,v=>calc('d',v))}</div>{field('全体UPH（件/時）',p.calc.uph,v=>calc('uph',v))}<p>今日の通常単価：Uber {day.u.cnt?yen(day.u.amt/day.u.cnt):'—'} ／ 出前館 {day.d.cnt?yen(day.d.amt/day.d.cnt):'—'}</p><button onClick={()=>change({...p,calc:{...p.calc,u:day.u.cnt?Math.round(day.u.amt/day.u.cnt):p.calc.u,d:day.d.cnt?Math.round(day.d.amt/day.d.cnt):p.calc.d}})}>この実績単価を使う</button><label>季節モデル<select value={p.model} onChange={e=>change({...p,model:Number(e.target.value)})}>{p.models.map((m,i)=><option value={i} key={i}>{m.name}</option>)}</select></label><button onClick={()=>change({...p,calc:{...p.calc,u:p.models[p.model].u,d:p.models[p.model].d,uph:p.models[p.model].uph}})}>単価・UPHの組を使う</button></div>
+    <div className="card"><h3>今日の目標 {yen(sum.target)}</h3><p>週基準 {yen(sum.w.amountFor(date))} ／ 月基準 {yen(sum.m.amountFor(date))}</p><p>計画実績 {yen(sum.actual)} ／ あと {yen(sum.remain)}</p><p>クエスト配分 {yen(active.reduce((a,q)=>a+pallocation(q,date),0))} を含む</p><button onClick={()=>navigate('goals')}>目標・稼働予定を変更</button></div>
+    <div className="card"><label>比較方法<select value={mode} onChange={e=>setMode(e.target.value)}><option value="cnt">あと何件</option><option value="amt">あと何円（配分込の目標まで）</option></select></label>{mode==='amt'&&field('今日の着地目標（空欄は今日の目標）',money,setMoney)}{active.map(q=><label key={q.id}>クエストの期間を今日で終了する想定<select value={q.finish} onChange={e=>qchange(q.id,'finish',e.target.value)}><option value="n">明日以降も継続</option><option value="base">今日で終了として比較</option></select></label>)}</div>
+    {!blocked&&(!pready(p.calc)?<p>使用する会社の通常単価を設定してください。</p>:mode==='cnt'?<div className="planner-results">{p.scenarios.map((n,i)=>resultCard(Math.floor(pn(n)),i))}</div>:(()=>{const n=psolve(vault,p,date,money===''?sum.target:pn(money));return n===null?<p>単価を設定してください。</p>:resultCard(n,0);})())}
+    <p>通常売上と配分額は計画値です。会計の実績は変更しません。</p></>}
+    {view==='settings'&&<div className="card"><h2>単価・UPHのプリセット</h2>{p.models.map((m,i)=><div key={i}><h3>{m.name}</h3><div className="grid-3">{['u','d','uph'].map((k,j)=>field(['Uber単価','出前館単価','UPH'][j],m[k],v=>change({...p,models:p.models.map((x,z)=>z===i?{...x,[k]:v}:x)})))}</div></div>)}</div>}
+  </section>;
+}
+
+function App() {
+  const [expenseState, setExpenseState] = useState(() => {
+    try { return {items: cleanExpenses(JSON.parse(localStorage.getItem(SK.expenses) || '[]')), error: ''}; }
+    catch { return {items: [], error: '経費データを読み込めません。既存データ保護のため保存を停止しています。バックアップから復元してください。'}; }
+  });
+  const expenses = expenseState.items;
+  const saveExpenses = (items) => {
+    if (expenseState.error) { alert(expenseState.error); return false; }
+    try { const clean = cleanExpenses(items); localStorage.setItem(SK.expenses, JSON.stringify(clean)); setExpenseState({items: clean, error: ''}); setIsDirty(true); return true; }
+    catch { alert('経費を保存できませんでした。入力内容を残しています。'); return false; }
+  };
+  const [vault, setVault] = useState(loadInitialVault);
+  const [date, setDate] = useState(loadInitialDate);
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [planState, setPlanState] = useState(pload);
+  const planning = planState.data;
+  const savePlanning = next => {
+    if(planState.error) {alert(planState.error);return;}
+    try {pvalidate(next);localStorage.setItem(PLAN_KEY, JSON.stringify(next));setPlanState({data:next,error:''});setIsDirty(true);}
+    catch(e) {alert('計画を保存できません：'+e.message);}
+  };
+  const [period, setPeriod] = useState('day'); 
+  const [periodicGoals, setPeriodicGoals] = useState(loadInitialGoals);
+  
+  // 📝 メモ管理 & ポップアップ編集モーダル状態
+  const [memos, setMemos] = useState(loadInitialMemos);
+  const [memoFilter, setMemoFilter] = useState('すべて');
+  const [memoSearch, setMemoSearch] = useState('');
+  const [newMemoText, setNewMemoText] = useState('');
+  const [newMemoCat, setNewMemoCat] = useState('🛵稼働');
+  const [editingMemoId, setEditingMemoId] = useState(null);
+
+  const [showLog, setShowLog] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  const [calYear, setCalYear] = useState(() => Number(loadInitialDate().split('-')[0]));
+  const [calMonth, setCalMonth] = useState(() => Number(loadInitialDate().split('-')[1]));
+
+  const dayData = useMemo(() => {
+    return vault[date] || { weather: '晴', condition: 4, sleepHours: 7, goalAmt: 0, dailyMemo: '', sets: [EMPTY_SET()] };
+  }, [vault, date]);
+
+  const { weather, sets, dailyMemo = '', condition = 4, sleepHours = 7 } = dayData;
+
+  useEffect(() => { localStorage.setItem(SK.db, JSON.stringify(vault)); }, [vault]);
+  useEffect(() => { localStorage.setItem(SK.goals, JSON.stringify(periodicGoals)); }, [periodicGoals]);
+  useEffect(() => { localStorage.setItem(SK.memos, JSON.stringify(memos)); }, [memos]);
+  useEffect(() => { localStorage.setItem(SK.currentDate, date); setShowLog(false); }, [date]);
+
+  useEffect(() => {
+    const [y, m] = date.split('-').map(Number);
+    setCalYear(y); setCalMonth(m);
+  }, [date]);
+
+  const updateDayField = useCallback((field, value) => {
+    setIsDirty(true);
+    setVault(prev => ({
+      ...prev,
+      [date]: {
+        weather: prev[date]?.weather || '晴',
+        condition: prev[date]?.condition || 4,
+        sleepHours: prev[date]?.sleepHours || 7,
+        goalAmt: prev[date]?.goalAmt || 0,
+        dailyMemo: prev[date]?.dailyMemo || '',
+        sets: prev[date]?.sets || [EMPTY_SET()],
+        ...prev[date],
+        [field]: value
+      }
+    }));
+  }, [date]);
+
+  const updateSet = useCallback((i, key, val) => {
+    setIsDirty(true);
+    const newSets = [...sets];
+    newSets[i] = { ...newSets[i], [key]: val };
+    updateDayField('sets', newSets);
+  }, [sets, updateDayField]);
+
+  const toggleOpen = (i) => {
+    const newSets = [...sets]; newSets[i] = { ...newSets[i], open: !newSets[i].open };
+    updateDayField('sets', newSets);
+  };
+
+  const goalStorageKey = useMemo(() => {
+    const [y, m] = date.split('-');
+    if (period === 'day') return `D-${date}`;
+    if (period === 'week') return `W-${getYearWeekStr(date)}`;
+    if (period === 'month') return `M-${y}-${m}`;
+    return `Y-${y}`;
+  }, [date, period]);
+
+  const updatePeriodicGoal = (field, val) => {
+    setIsDirty(true);
+    setPeriodicGoals(prev => {
+      const currentGoal = prev[goalStorageKey] || {};
+      const updated = typeof currentGoal === 'object' && currentGoal !== null 
+        ? { ...currentGoal, [field]: Number(val) }
+        : { amt: Number(currentGoal || 0), cnt: 0, [field]: Number(val) };
+      return { ...prev, [goalStorageKey]: updated };
+    });
+  };
+
+  const calced = useMemo(() => {
+    const n = v => parseFloat(v) || 0;
+    return sets.map((s, i) => {
+      const p = sets[i-1] || { d_cum:0, u_cum:0, r_cum:0, m_cum:0, d_cnt_cum:0, u_cnt_cum:0, r_cnt_cum:0, m_cnt_cum:0, d_que_cum:0, u_que_cum:0, r_que_cum:0, m_que_cum:0, km_cum:0 };
+      const sp = (n(s.d_cum)-n(p.d_cum)) + (n(s.u_cum)-n(p.u_cum)) + (n(s.r_cum)-n(p.r_cum)) + (n(s.m_cum)-n(p.m_cum)) + (n(s.d_que_cum)-n(p.d_que_cum)) + (n(s.u_que_cum)-n(p.u_que_cum)) + (n(s.r_que_cum)-n(p.r_que_cum)) + (n(s.m_que_cum)-n(p.m_que_cum));
+      const sc = (n(s.d_cnt_cum)-n(p.d_cnt_cum)) + (n(s.u_cnt_cum)-n(p.u_cnt_cum)) + (n(s.r_cnt_cum)-n(p.r_cnt_cum)) + (n(s.m_cnt_cum)-n(p.m_cnt_cum));
+      const dur = calcDuration(s.start, s.end);
+      const setJikyu = (dur && dur.total > 0) ? Math.round(sp / dur.total) : 0;
+      const setTanka = sc > 0 ? Math.round(sp / sc) : 0;
+
+      return {
+        ...s,
+        d_p: n(s.d_cum)-n(p.d_cum), u_p: n(s.u_cum)-n(p.u_cum), r_p: n(s.r_cum)-n(p.r_cum), m_p: n(s.m_cum)-n(p.m_cum),
+        d_c: n(s.d_cnt_cum)-n(p.d_cnt_cum), u_c: n(s.u_cnt_cum)-n(p.u_cnt_cum), r_c: n(s.r_cnt_cum)-n(p.r_cnt_cum), m_c: n(s.m_cnt_cum)-n(p.m_cnt_cum),
+        d_qp: n(s.d_que_cum)-n(p.d_que_cum), u_qp: n(s.u_que_cum)-n(p.u_que_cum), r_qp: n(s.r_que_cum)-n(p.r_que_cum), m_qp: n(s.m_que_cum)-n(p.m_que_cum),
+        km_p: n(s.km_cum)-n(p.km_cum), dur, setJikyu, setTanka, sp, sc
+      };
+    });
+  }, [sets]);
+
+  const daySummary = useMemo(() => {
+    const n = v => parseFloat(v) || 0;
+    const last = sets[sets.length - 1] || EMPTY_SET();
+    const total_sales = n(last.d_cum) + n(last.u_cum) + n(last.r_cum) + n(last.m_cum);
+    const total_que   = n(last.d_que_cum) + n(last.u_que_cum) + n(last.r_que_cum) + n(last.m_que_cum);
+    const total_cnt   = n(last.d_cnt_cum) + n(last.u_cnt_cum) + n(last.r_cnt_cum) + n(last.m_cnt_cum);
+    const total_km    = n(last.km_cum);
+    const total_h     = calced.reduce((a, s) => a + (s.dur ? s.dur.total : 0), 0);
+    return { total_sales: total_sales + total_que, real_sales: total_sales, total_que, total_cnt, total_km, total_h, jikyu: total_h > 0 ? Math.round((total_sales + total_que) / total_h) : 0 };
+  }, [sets, calced]);
+
+  const periodMeta = useMemo(() => {
+    const current = new Date(date);
+    const day = current.getDay();
+    const mondayOffset = day === 0 ? -6 : 1 - day;
+    const mon = new Date(current.getTime() + mondayOffset * 86400000);
+    const sun = new Date(mon.getTime() + 6 * 86400000);
+    const [y, m, d] = date.split('-');
+    const dayJa = ['日','月','火','水','木','金','土'][current.getDay()];
+
+    return {
+      dayStr: `${y}/${m}/${d} (${dayJa})`,
+      weekStr: `${mon.getFullYear()}年 第${getYearWeekStr(date).split('-W')[1]}週 (${String(mon.getMonth()+1).padStart(2,'0')}/${String(mon.getDate()).padStart(2,'0')}〜${String(sun.getMonth()+1).padStart(2,'0')}/${String(sun.getDate()).padStart(2,'0')})`,
+      monthStr: `${y}年 ${m}月 累計`,
+      yearStr: `${y}年 年間累計`,
+      monRef: mon, sunRef: sun,
+      dayOfWeek: day
+    };
+  }, [date]);
+
+  const periodicAnalysis = useMemo(() => {
+    const n = v => parseFloat(v) || 0;
+    const [targetYear, targetMonth] = date.split('-').map(Number);
+    
+    let monthTotal = 0; let monthReal = 0; let monthQue = 0; let monthCnt = 0; let monthHours = 0; let monthKm = 0;
+    let weekTotal = 0; let weekReal = 0; let weekQue = 0; let weekCnt = 0; let weekHours = 0; let weekKm = 0;
+    let yearTotal = 0; let yearReal = 0; let yearQue = 0; let yearCnt = 0; let yearHours = 0; let yearKm = 0;
+
+    let weekMonThu = { total: 0, real: 0, que: 0, cnt: 0, hours: 0, km: 0 };
+    let weekFriSun = { total: 0, real: 0, que: 0, cnt: 0, hours: 0, km: 0 };
+
+    const createPfBuffer = () => ({ d: { s:0, c:0 }, u: { s:0, c:0 }, r: { s:0, c:0 }, m: { s:0, c:0 } });
+    const weekPf = createPfBuffer();
+    const monthPf = createPfBuffer();
+    const yearPf = createPfBuffer();
+
+    Object.keys(vault).forEach(dKey => {
+      const [y, m] = dKey.split('-').map(Number);
+      const dayVault = vault[dKey]; const sList = dayVault.sets || []; if (sList.length === 0) return;
+
+      const lastS = sList[sList.length - 1];
+      const sales = n(lastS.d_cum) + n(lastS.u_cum) + n(lastS.r_cum) + n(lastS.m_cum);
+      const que = n(lastS.d_que_cum) + n(lastS.u_que_cum) + n(lastS.r_que_cum) + n(lastS.m_que_cum);
+      const cnt = n(lastS.d_cnt_cum) + n(lastS.u_cnt_cum) + n(lastS.r_cnt_cum) + n(lastS.m_cnt_cum);
+      const km = n(lastS.km_cum);
+      const totalAmt = sales + que;
+
+      const dayCalced = sList.map(s => ({ dur: calcDuration(s.start, s.end) }));
+      const dayTotalHours = dayCalced.reduce((a, s) => a + (s.dur ? s.dur.total : 0), 0);
+
+      const getPfData = (k) => ({
+        sales: n(lastS[k+'_cum']) + n(lastS[k+'_que_cum']),
+        cnt: n(lastS[k+'_cnt_cum'])
+      });
+
+      if (y === targetYear) {
+        yearTotal += totalAmt; yearReal += sales; yearQue += que; yearCnt += cnt; yearHours += dayTotalHours; yearKm += km;
+        PLATFORMS.forEach(p => {
+          const pData = getPfData(p.key);
+          yearPf[p.key].s += pData.sales; yearPf[p.key].c += pData.cnt;
+        });
+
+        if (m === targetMonth) {
+          monthTotal += totalAmt; monthReal += sales; monthQue += que; monthCnt += cnt; monthHours += dayTotalHours; monthKm += km;
+          PLATFORMS.forEach(p => {
+            const pData = getPfData(p.key);
+            monthPf[p.key].s += pData.sales; monthPf[p.key].c += pData.cnt;
+          });
+        }
+      }
+
+      const thisDate = new Date(dKey + 'T00:00:00');
+      const monMidnight = new Date(periodMeta.monRef); monMidnight.setHours(0,0,0,0);
+      const sunMidnight = new Date(periodMeta.sunRef); sunMidnight.setHours(23,59,59,999);
+
+      if (thisDate >= monMidnight && thisDate <= sunMidnight) {
+        weekTotal += totalAmt; weekReal += sales; weekQue += que; weekCnt += cnt; weekHours += dayTotalHours; weekKm += km;
+        PLATFORMS.forEach(p => {
+          const pData = getPfData(p.key);
+          weekPf[p.key].s += pData.sales; weekPf[p.key].c += pData.cnt;
+        });
+
+        const dayOfWeek = thisDate.getDay();
+        if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+          weekMonThu.total += totalAmt; weekMonThu.real += sales; weekMonThu.que += que; weekMonThu.cnt += cnt; weekMonThu.hours += dayTotalHours; weekMonThu.km += km;
+        } else {
+          weekFriSun.total += totalAmt; weekFriSun.real += sales; weekFriSun.que += que; weekFriSun.cnt += cnt; weekFriSun.hours += dayTotalHours; weekFriSun.km += km;
+        }
+      }
+    });
+
+    const lastDayS = sets[sets.length - 1] || EMPTY_SET();
+    const dayPf = createPfBuffer();
+    PLATFORMS.forEach(p => {
+      dayPf[p.key].s = n(lastDayS[p.key+'_cum']) + n(lastDayS[p.key+'_que_cum']);
+      dayPf[p.key].c = n(lastDayS[p.key+'_cnt_cum']);
+    });
+
+    return { 
+      day: { total: daySummary.total_sales, real: daySummary.real_sales, que: daySummary.total_que, cnt: daySummary.total_cnt, hours: daySummary.total_h, km: daySummary.total_km, pf: dayPf },
+      week: { 
+        total: weekTotal, real: weekReal, que: weekQue, cnt: weekCnt, hours: weekHours, km: weekKm, pf: weekPf,
+        monThu: {
+          ...weekMonThu,
+          jikyu: weekMonThu.hours > 0 ? Math.round(weekMonThu.total / weekMonThu.hours) : 0,
+          tanka: weekMonThu.cnt > 0 ? Math.round(weekMonThu.total / weekMonThu.cnt) : 0,
+          realTanka: weekMonThu.cnt > 0 ? Math.round(weekMonThu.real / weekMonThu.cnt) : 0,
+          uph: weekMonThu.hours > 0 ? (weekMonThu.cnt / weekMonThu.hours).toFixed(1) : '0.0'
+        },
+        friSun: {
+          ...weekFriSun,
+          jikyu: weekFriSun.hours > 0 ? Math.round(weekFriSun.total / weekFriSun.hours) : 0,
+          tanka: weekFriSun.cnt > 0 ? Math.round(weekFriSun.total / weekFriSun.cnt) : 0,
+          realTanka: weekFriSun.cnt > 0 ? Math.round(weekFriSun.real / weekFriSun.cnt) : 0,
+          uph: weekFriSun.hours > 0 ? (weekFriSun.cnt / weekFriSun.hours).toFixed(1) : '0.0'
+        }
+      },
+      month: { total: monthTotal, real: monthReal, que: monthQue, cnt: monthCnt, hours: monthHours, km: monthKm, pf: monthPf },
+      year: { total: yearTotal, real: yearReal, que: yearQue, cnt: yearCnt, hours: yearHours, km: yearKm, pf: yearPf }
+    };
+  }, [vault, date, daySummary, periodMeta, sets]);
+
+  /* 🎯 目標・進捗 & PF別必要件数換算 & キロ単価ロジック */
+  const activePeriodData = useMemo(() => {
+    const data = periodicAnalysis[period];
+    const rawGoal = periodicGoals[goalStorageKey];
+    const goalAmt = typeof rawGoal === 'object' && rawGoal !== null ? (rawGoal.amt || 0) : Number(rawGoal || 0);
+    const goalCnt = typeof rawGoal === 'object' && rawGoal !== null ? (rawGoal.cnt || 0) : 0;
+    const remainAmt = goalAmt > 0 ? goalAmt - data.total : 0;
+    const percentAmt = goalAmt > 0 ? Math.min(Math.round((data.total / goalAmt) * 100), 100) : 0;
+    const remainCnt = goalCnt > 0 ? goalCnt - data.cnt : 0;
+    const percentCnt = goalCnt > 0 ? Math.min(Math.round((data.cnt / goalCnt) * 100), 100) : 0;
+    const tanka = data.cnt > 0 ? Math.round(data.total / data.cnt) : 0;
+    const realTanka = data.cnt > 0 ? Math.round(data.real / data.cnt) : 0;
+    const needCnt = (remainAmt > 0 && tanka > 0) ? Math.ceil(remainAmt / tanka) : 0;
+
+    // キロ単価換算（総売上 ÷ 走行距離）
+    const kmTanka = data.km > 0 ? Math.round(data.total / data.km) : 0;
+
+    // パターンB: 稼働前は基準単価、実績が出たらリアル単価に自動連動
+    const isWeekend = (periodMeta.dayOfWeek === 0 || periodMeta.dayOfWeek === 6);
+    const defaultDemaeTanka = isWeekend ? 550 : 500;
+    const defaultUberTanka = 350;
+
+    const dPf = data.pf?.d || { s: 0, c: 0 };
+    const uPf = data.pf?.u || { s: 0, c: 0 };
+
+    const effectiveDTanka = dPf.c > 0 ? Math.round(dPf.s / dPf.c) : defaultDemaeTanka;
+    const effectiveUTanka = uPf.c > 0 ? Math.round(uPf.s / uPf.c) : defaultUberTanka;
+
+    const needCntD = (remainAmt > 0 && effectiveDTanka > 0) ? Math.ceil(remainAmt / effectiveDTanka) : 0;
+    const needCntU = (remainAmt > 0 && effectiveUTanka > 0) ? Math.ceil(remainAmt / effectiveUTanka) : 0;
+
+    let dailyNorma = 0;
+    if (remainAmt > 0) {
+      const currentRef = new Date(date);
+      if (period === 'day') dailyNorma = remainAmt;
+      else if (period === 'week') {
+        const dayIdx = currentRef.getDay();
+        const remainDays = dayIdx === 0 ? 1 : 7 - dayIdx + 1;
+        dailyNorma = Math.ceil(remainAmt / remainDays);
+      } else if (period === 'month') {
+        const lastDay = new Date(currentRef.getFullYear(), currentRef.getMonth() + 1, 0).getDate();
+        dailyNorma = Math.ceil(remainAmt / (lastDay - currentRef.getDate() + 1));
+      } else if (period === 'year') {
+        const lastDay = new Date(currentRef.getFullYear(), 11, 31);
+        const remainDays = Math.ceil((lastDay - currentRef) / (1000 * 60 * 60 * 24)) + 1;
+        dailyNorma = Math.ceil(remainAmt / remainDays);
+      }
+    }
+    const periodJikyu = data.hours > 0 ? Math.round(data.total / data.hours) : 0;
+    const uph = data.hours > 0 ? (data.cnt / data.hours).toFixed(1) : '0.0';
+
+    return { 
+      ...data, goalAmt, goalCnt, remainAmt, percentAmt, remainCnt, percentCnt, needCnt, 
+      needCntD, needCntU, effectiveDTanka, effectiveUTanka, isRealD: dPf.c > 0, isRealU: uPf.c > 0,
+      dailyNorma, periodJikyu, kmTanka, tanka, realTanka, uph 
+    };
+  }, [periodicAnalysis, period, periodicGoals, goalStorageKey, date, periodMeta]);
+
+  const handleStepPeriod = (direction) => {
+    const current = new Date(date);
+    if (period === 'day') current.setDate(current.getDate() + direction);
+    else if (period === 'week') current.setDate(current.getDate() + (direction * 7));
+    else if (period === 'month') current.setMonth(current.getMonth() + direction);
+    else if (period === 'year') current.setFullYear(current.getFullYear() + direction);
+    setDate(formatDateToParam(current));
+  };
+
+  const handleCalendarMonthChange = (direction) => {
+    let nextMonth = calMonth + direction; let nextYear = calYear;
+    if (nextMonth < 1) { nextMonth = 12; nextYear -= 1; }
+    else if (nextMonth > 12) { nextMonth = 1; nextYear += 1; }
+    setCalYear(nextYear); setCalMonth(nextMonth);
+  };
+
+  const startNewDay = () => {
+    const targetDate = getBusinessDateStr();
+    if (date === targetDate) {
+      if (!window.confirm('現在の最新営業日データを完全にクリアしてリセットしますか？')) return;
+      setIsDirty(true);
+      setVault(prev => ({ ...prev, [targetDate]: { weather: '晴', condition: 4, sleepHours: 7, goalAmt: 0, dailyMemo: '', sets: [EMPTY_SET()] } }));
+    } else { setDate(targetDate); }
+    setActiveTab('dashboard'); setPeriod('day');
+  };
+
+  const deleteSet = (i) => {
+    if (sets.length <= 1) return;
+    if (!window.confirm(`SET ${i+1} を削除しますか？`)) return;
+    setIsDirty(true);
+    updateDayField('sets', sets.filter((_, idx) => idx !== i));
+  };
+
+  const currentCalendarMonthTotal = useMemo(() => {
+    const n = v => parseFloat(v) || 0;
+    let total = 0;
+    Object.keys(vault).forEach(dKey => {
+      const [y, m] = dKey.split('-').map(Number);
+      if (y === calYear && m === calMonth) {
+        const dayVault = vault[dKey]; const sList = dayVault.sets || [];
+        if (sList.length > 0) {
+          const lastS = sList[sList.length - 1];
+          total += (n(lastS.d_cum) + n(lastS.u_cum) + n(lastS.r_cum) + n(lastS.m_cum)) + (n(lastS.d_que_cum) + n(lastS.u_que_cum) + n(lastS.r_que_cum) + n(lastS.m_que_cum));
+        }
+      }
+    });
+    return total;
+  }, [vault, calYear, calMonth]);
+
+  const addPeriodicSet = () => {
+    setIsDirty(true);
+    const last = sets[sets.length - 1] || EMPTY_SET();
+    updateDayField('sets', [...sets, {
+      ...EMPTY_SET(),
+      d_cum: last.d_cum, u_cum: last.u_cum, r_cum: last.r_cum, m_cum: last.m_cum,
+      d_cnt_cum: last.d_cnt_cum, u_cnt_cum: last.u_cnt_cum, r_cnt_cum: last.r_cnt_cum, m_cnt_cum: last.m_cnt_cum,
+      d_que_cum: last.d_que_cum, u_que_cum: last.u_que_cum, r_que_cum: last.r_que_cum, m_que_cum: last.m_que_cum,
+      km_cum: last.km_cum,
+    }]);
+  };
+
+  const calendarDays = useMemo(() => {
+    const firstDayIndex = new Date(calYear, calMonth - 1, 1).getDay();
+    const totalDays = new Date(calYear, calMonth, 0).getDate();
+    const mondayBasedStartIndex = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+
+    const cells = [];
+    for (let i = 0; i < mondayBasedStartIndex; i++) { cells.push({ empty: true }); }
+    for (let dayNum = 1; dayNum <= totalDays; dayNum++) {
+      const currentKey = `${calYear}-${String(calMonth).padStart(2,'0')}-${String(dayNum).padStart(2,'0')}`;
+      const dayVault = vault[currentKey]; let totalSales = 0; let dayCond = null;
+      if (dayVault) {
+        dayCond = dayVault.condition;
+        if (dayVault.sets && dayVault.sets.length > 0) {
+          const n = v => parseFloat(v) || 0; const lastS = dayVault.sets[dayVault.sets.length - 1];
+          totalSales = (n(lastS.d_cum) + n(lastS.u_cum) + n(lastS.r_cum) + n(lastS.m_cum)) + (n(lastS.d_que_cum) + n(lastS.u_que_cum) + n(lastS.r_que_cum) + n(lastS.m_que_cum));
+        }
+      }
+      cells.push({ empty: false, dayNum, dateKey: currentKey, amt: totalSales, cond: dayCond });
+    }
+    return cells;
+  }, [vault, calYear, calMonth]);
+
+  const saveToiCloudJSON = () => {
+    if (expenseState.error) { alert(expenseState.error); return; }
+    if(planState.error) {alert(planState.error);return;}
+    const backup = { vault, periodicGoals, memos, expenses, planning, version: 15 };
+    const dataStr = JSON.stringify(backup, null, 2);
+    const blob = new Blob([dataStr], { type: "application/json" });
+    const url = URL.createObjectURL(blob); const link = document.createElement("a");
+    link.setAttribute("href", url); link.setAttribute("download", "delilog_master_backup.json");
+    document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setIsDirty(false);
+  };
+
+  const loadFromiCloudJSON = (e) => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = JSON.parse(event.target.result);
+        if(data.version && ![13,14,15].includes(data.version)) throw Error('未対応のバージョン');
+        const restoredPlanning = data.planning ? pvalidate(data.planning) : null;
+        if(data.version===15 && !restoredPlanning) throw Error('計画データがありません');
+        const rv=data.vault||data;
+        if(!rv || typeof rv!=='object' || Array.isArray(rv)) throw Error('記録形式が不正');
+        for(const [d,v] of Object.entries(rv)) if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||!v||!Array.isArray(v.sets)) throw Error('営業日データが不正');
+        if(data.periodicGoals && (typeof data.periodicGoals!=='object'||Array.isArray(data.periodicGoals))) throw Error('目標形式が不正');
+        if(data.memos && !Array.isArray(data.memos)) throw Error('メモ形式が不正');
+        if(restoredPlanning) {const err=plinkCheck(restoredPlanning,rv);if(err)throw Error(err);}
+
+        const restoredExpenses = data.vault && Object.prototype.hasOwnProperty.call(data, 'expenses') ? cleanExpenses(data.expenses) : null;
+        if(restoredPlanning) localStorage.setItem(PLAN_KEY, JSON.stringify(restoredPlanning));
+        if (restoredExpenses !== null) {
+          localStorage.setItem(SK.expenses, JSON.stringify(restoredExpenses));
+          setExpenseState({items: restoredExpenses, error: ''});
+        }
+        if(restoredPlanning) setPlanState({data:restoredPlanning,error:''});
+        if (data.vault) {
+          setVault(data.vault);
+          if (data.periodicGoals) setPeriodicGoals(data.periodicGoals);
+          if (data.memos) setMemos(data.memos);
+        } else {
+          setVault(data);
+        }
+        setIsDirty((restoredExpenses === null && expenses.length > 0) || !restoredPlanning); alert(restoredExpenses === null ? "復元しました。経費を含まない旧バックアップのため、現在の経費は保持しました。" : "バックアップから復元しました。計画を含まない旧形式では現在の計画設定を保持します。");
+      } catch (err) { alert("同期に失敗しました。形式をご確認ください。"); }
+    };
+    reader.readAsText(file); e.target.value = '';
+  };
+
+  const addInboxMemo = () => {
+    if (!newMemoText.trim()) return;
+    const newEntry = {
+      id: Date.now(),
+      date: getBusinessDateStr(),
+      time: getNow(),
+      cat: newMemoCat,
+      text: newMemoText.trim()
+    };
+    setMemos(prev => [newEntry, ...prev]);
+    setNewMemoText('');
+    setIsDirty(true);
+  };
+
+  const updateInboxMemoText = (id, newText) => {
+    setIsDirty(true);
+    setMemos(prev => prev.map(m => m.id === id ? { ...m, text: newText } : m));
+  };
+
+  const setInboxMemoCat = (id, newCat) => {
+    setIsDirty(true);
+    setMemos(prev => prev.map(m => m.id === id ? { ...m, cat: newCat } : m));
+  };
+
+  const deleteInboxMemo = (id) => {
+    if (!window.confirm('このメモを削除しますか？')) return;
+    setMemos(prev => prev.filter(m => m.id !== id));
+    if (editingMemoId === id) setEditingMemoId(null);
+    setIsDirty(true);
+  };
+
+  const filteredMemos = useMemo(() => {
+    return memos.filter(m => {
+      const matchCat = memoFilter === 'すべて' || m.cat === memoFilter;
+      const matchText = !memoSearch.trim() || m.text.toLowerCase().includes(memoSearch.toLowerCase());
+      return matchCat && matchText;
+    });
+  }, [memos, memoFilter, memoSearch]);
+
+  const activeEditingMemo = useMemo(() => {
+    return memos.find(m => m.id === editingMemoId) || null;
+  }, [memos, editingMemoId]);
+
+  const generateLog = () => {
+    const n = v => parseFloat(v) || 0;
+    const { real_sales, total_que, total_cnt, total_km, total_h, jikyu } = daySummary;
+    const dayJa = ['日','月','火','水','木','金','土'][new Date(date).getDay()];
+    const dateStr = date.replace(/-/g,'/');
+
+    const last = sets[sets.length - 1] || EMPTY_SET();
+    const d_total = n(last.d_cum); const u_total = n(last.u_cum); const r_total = n(last.r_cum); const m_total = n(last.m_cum);
+    const d_cnt   = n(last.d_cnt_cum); const u_cnt   = n(last.u_cnt_cum); const r_cnt   = n(last.r_cnt_cum); const m_cnt   = n(last.m_cnt_cum);
+    const d_que = n(last.d_que_cum); const u_que = n(last.u_que_cum); const r_que = n(last.r_que_cum); const m_que = n(last.m_que_cum);
+    const condLabel = COND_ICONS.find(c => c.val === condition)?.label || condition;
+
+    const hm = (h) => { const hh = Math.floor(h); const mm = Math.round((h - hh) * 60); return mm > 0 ? `${hh}時間${mm}分` : `${hh}時間`; };
+    
+    let log = `${dateStr} (${dayJa})\n📊 本日累計リザルト\n\n| 項目 | 内容 | 備考 |\n| :-- | --: | :-- |\n`;
+    log += `| **天気** | ${weather} | ${total_que > 0 ? 'クエあり' : 'クエなし'} |\n`;
+    log += `| **体調** | ${condLabel} | 睡眠: ${sleepHours}h |\n`;
+    log += `| **総売上** | **${(real_sales + total_que).toLocaleString()} 円** | |\n`;
+    log += `| **実質売上** | **${real_sales.toLocaleString()} 円** | クエスト含まず |\n`;
+    log += `| **クエ合計** | **${total_que.toLocaleString()} 円** | |\n`;
+    log += `| **総完了件数** | **${total_cnt} 件** | (D:${d_cnt} / U:${u_cnt} / R:${r_cnt} / m:${m_cnt}) |\n`;
+    log += `| **1件単価平均** | **${total_cnt > 0 ? Math.round((real_sales + total_que) / total_cnt) : 0} 円** | 総売上 ÷ 総件数 |\n`;
+    log += `| **総走行距離** | **${total_km} km** | |\n`;
+    log += `| **実稼働時間** | **${hm(total_h)}** | |\n`;
+    log += `| **時給換算** | **${jikyu.toLocaleString()} 円** | 総売上 ÷ 実稼働時間 |\n\n📦 Platform別内訳\n\n`;
+    log += `| PF | 件数 | 総額 | 実質売上 | クエ |\n| :--: | --: | --: | --: | --: |\n`;
+    log += `| **出前館 (D)** | ${d_cnt} 件 | ${(d_total+d_que).toLocaleString()} 円 | ${d_total.toLocaleString()} 円 | ${d_que.toLocaleString()} 円 |\n`;
+    log += `| **Uber Eats (U)** | ${u_cnt} 件 | ${(u_total+u_que).toLocaleString()} 円 | ${u_total.toLocaleString()} 円 | ${u_que.toLocaleString()} 円 |\n`;
+    log += `| **RocketNow (R)** | ${r_cnt} 件 | ${(r_total+r_que).toLocaleString()} 円 | ${r_total.toLocaleString()} 円 | ${r_que.toLocaleString()} 円 |\n`;
+    log += `| **menu (m)** | ${m_cnt} 件 | ${(m_total+m_que).toLocaleString()} 円 | ${m_total.toLocaleString()} 円 | ${m_que.toLocaleString()} 円 |\n\n🕒 各セット詳細\n\n`;
+
+    calced.forEach((s, i) => {
+      const sp = s.d_p + s.u_p + s.r_p + s.m_p; const sc = s.d_c + s.u_c + s.r_c + s.m_c;
+      const pf_parts = []; if (s.d_c > 0) pf_parts.push("D:" + s.d_c); if (s.u_c > 0) pf_parts.push("U:" + s.u_c); if (s.r_c > 0) pf_parts.push("R:" + s.r_c); if (s.m_c > 0) pf_parts.push("m:" + s.m_c);
+      log += `- **第${i+1}セット ${s.start || '--:--'} 〜 ${s.end || '--:--'}** ${s.dur ? `(${s.dur.h>0?s.dur.h+'h':''}${s.dur.m}m)` : ''}\n`;
+      log += `  - **実績**：${sc}件 / ${sp.toLocaleString()}円${s.km_p > 0 ? ` / ${s.km_p}km` : ''} ${pf_parts.length>0 ? `(${pf_parts.join(' / ')})` : ''}\n`;
+      if (s.memo) log += `  - **戦術**：${s.memo}\n`;
+      log += '\n';
+    });
+
+    if (dailyMemo && dailyMemo.trim()) {
+      log += `📝 本日の気づき・戦術メモ\n\n${dailyMemo.trim()}\n\n`;
+    }
+
+    return log.trim();
+  };
+
+  const periodLabels = { day: '本日', week: '今週', month: '今月累計', year: '今年累計' };
+  const currentNavText = { day: periodMeta.dayStr, week: periodMeta.weekStr, month: periodMeta.monthStr, year: periodMeta.yearStr }[period];
+
+  const formatHours = (h) => {
+    if (!h || h <= 0) return '0h';
+    const hh = Math.floor(h);
+    const mm = Math.round((h - hh) * 60);
+    return mm > 0 ? `${hh}h${mm}m` : `${hh}h`;
+  };
+
+  return (
+    <div class="app-shell">
+      {/* SIDEBAR (PC PANEL) */}
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">🛵</div>
+          <div>
+            <div class="brand-title">DELIVERY LOG</div>
+            <p style={{fontSize:'10px', color:'var(--muted)'}}>デリログ // V13 PRO</p>
+          </div>
+        </div>
+        <nav class="nav-menu">
+          <button class={`nav-item ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>📊 ホーム</button>
+          <button class={`nav-item ${activeTab === 'memos' ? 'active' : ''}`} onClick={() => setActiveTab('memos')}>📝 メモ / Inbox</button>
+          <button class={`nav-item ${activeTab === 'expenses' ? 'active' : ''}`} onClick={() => setActiveTab('expenses')}>🧾 経費</button>
+          <button class={`nav-item ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>📅 カレンダー</button>
+          <button class={`nav-item ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>⚙️ 設定・同期</button>
+          <button className="nav-item" onClick={() => setActiveTab('goals')}>🎯 目標管理</button>
+          <button className="nav-item" onClick={() => setActiveTab('simulator')}>🧮 逆算</button>
+        </nav>
+      </aside>
+
+      {/* MAIN LAYOUT CONTENT */}
+      <div class="main-content">
+        <header class="topbar">
+          <div>
+            <p>Target // {date.replace(/-/g,'/')}</p>
+            <h1>🛵 DELIVERY LOG</h1>
+          </div>
+          <div style={{display:'flex', gap:'10px'}}>
+            {isDirty ? (
+              <div class="cloud-indicator unsaved" onClick={saveToiCloudJSON} style={{cursor:'pointer'}}>⚠️ 未保存 (保存)</div>
+            ) : (
+              <div class="cloud-indicator">💾 JSON保存済み</div>
+            )}
+          </div>
+        </header>
+
+        {/* 📅 PERIOD SWITCHER TABS & NAVIGATION */}
+        {['dashboard','goals'].includes(activeTab) && (
+          <div class="period-switcher-container">
+            <div class="period-tabs">
+              <button class={`period-tab ${period === 'day' ? 'active' : ''}`} onClick={() => setPeriod('day')}>日</button>
+              <button class={`period-tab ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>週</button>
+              <button class={`period-tab ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>月</button>
+              <button class={`period-tab ${period === 'year' ? 'active' : ''}`} onClick={() => setPeriod('year')}>年</button>
+            </div>
+            
+            <div class="period-nav-bar">
+              <button class="period-nav-btn" onClick={() => handleStepPeriod(-1)}>◀</button>
+              <div class="period-nav-display">{currentNavText}</div>
+              <button class="period-nav-btn" onClick={() => handleStepPeriod(1)}>▶</button>
+            </div>
+          </div>
+        )}
+
+        {/* 📊 iPhone-first LIVE SUMMARY HEADER */}
+        {activeTab === 'dashboard' && (
+          <>
+            <div class="summary-bar">
+              <div class="sum-row"><div class="sum-item"><div class="sum-label">総売上</div><div class="sum-val accent">{activePeriodData.total.toLocaleString()}円</div></div></div>
+              <div class="sum-row">
+                <div class="sum-item"><div class="sum-label">配達件数</div><div class="sum-val green">{activePeriodData.cnt}件</div></div>
+                <div class="sum-item"><div class="sum-label">実働時間</div><div class="sum-val">{activePeriodData.hours > 0 ? formatHours(activePeriodData.hours) : '-'}</div></div>
+              </div>
+              <div class="sum-row">
+                <div class="sum-item"><div class="sum-label">UPH</div><div class="sum-val teal">{activePeriodData.uph}</div></div>
+                <div class="sum-item"><div class="sum-label">時給換算</div><div class="sum-val yellow">{activePeriodData.hours > 0 ? activePeriodData.periodJikyu.toLocaleString()+'円' : '-'}</div></div>
+              </div>
+              <div class="sum-row">
+                <div class="sum-item"><div class="sum-label">実質売上</div><div class="sum-val">{activePeriodData.real.toLocaleString()}円</div></div>
+                <div class="sum-item"><div class="sum-label">クエ抜き単価</div><div class="sum-val">{activePeriodData.cnt > 0 ? activePeriodData.realTanka.toLocaleString()+'円' : '-'}</div></div>
+              </div>
+            </div>
+            <details class="summary-secondary">
+              <summary>その他の集計</summary>
+              <div class="summary-extra">
+                <div class="sum-row"><span>走行距離</span><span class="sum-val">{activePeriodData.km > 0 ? activePeriodData.km+'km' : '-'}</span></div>
+                <div class="sum-row"><span>キロ単価</span><span class="sum-val">{activePeriodData.kmTanka > 0 ? activePeriodData.kmTanka.toLocaleString()+'円/km' : '-'}</span></div>
+                <div class="sum-row"><span>1件単価</span><span class="sum-val">{activePeriodData.cnt > 0 ? activePeriodData.tanka.toLocaleString()+'円' : '-'}</span></div>
+                <div class="sum-row"><span>クエスト合計</span><span class="sum-val">{activePeriodData.que.toLocaleString()}円</span></div>
+              </div>
+            </details>
+            {period === 'day' && <button class="quick-log-btn" onClick={() => document.getElementById('delivery-set-entry')?.scrollIntoView({behavior:'smooth',block:'start'})}>＋ 稼働セットを入力</button>}
+          </>
+        )}
+
+        {/* 🌓 週モード限定：【平日】＆【週末】分割集計 */}
+        {activeTab === 'dashboard' && period === 'week' && (
+          <div class="week-split-container">
+            <div class="split-card">
+              <div class="split-title weekday">📅 平日 (月〜木)</div>
+              <div class="split-main-amt">{periodicAnalysis.week.monThu.total.toLocaleString()} <span style={{fontSize:'13px', fontWeight:'normal', color:'var(--muted2)'}}>円</span></div>
+              <div class="split-sub-row">
+                <span>実質: <strong>{periodicAnalysis.week.monThu.real.toLocaleString()}</strong>円</span>
+                {periodicAnalysis.week.monThu.que > 0 && <span style={{color:'var(--teal)'}}>クエ: {periodicAnalysis.week.monThu.que.toLocaleString()}円</span>}
+              </div>
+              <div class="split-sub-metrics">
+                <span>📦 <strong>{periodicAnalysis.week.monThu.cnt}</strong>件</span>
+                <span>⏱️ {formatHours(periodicAnalysis.week.monThu.hours)}</span>
+                <span>⚡ UPH {periodicAnalysis.week.monThu.uph}</span>
+                <span>💴 時給 {periodicAnalysis.week.monThu.jikyu > 0 ? periodicAnalysis.week.monThu.jikyu.toLocaleString()+'円' : '-'}</span>
+              </div>
+            </div>
+
+            <div class="split-card">
+              <div class="split-title weekend">🔥 週末 (金〜日)</div>
+              <div class="split-main-amt">{periodicAnalysis.week.friSun.total.toLocaleString()} <span style={{fontSize:'13px', fontWeight:'normal', color:'var(--muted2)'}}>円</span></div>
+              <div class="split-sub-row">
+                <span>実質: <strong>{periodicAnalysis.week.friSun.real.toLocaleString()}</strong>円</span>
+                {periodicAnalysis.week.friSun.que > 0 && <span style={{color:'var(--teal)'}}>クエ: {periodicAnalysis.week.friSun.que.toLocaleString()}円</span>}
+              </div>
+              <div class="split-sub-metrics">
+                <span>📦 <strong>{periodicAnalysis.week.friSun.cnt}</strong>件</span>
+                <span>⏱️ {formatHours(periodicAnalysis.week.friSun.hours)}</span>
+                <span>⚡ UPH {periodicAnalysis.week.friSun.uph}</span>
+                <span>💴 時給 {periodicAnalysis.week.friSun.jikyu > 0 ? periodicAnalysis.week.friSun.jikyu.toLocaleString()+'円' : '-'}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 🎯 GOAL PANEL (目標パネルを上に配置) */}
+        {activeTab === 'goals' && (
+          <div class="goal-panel">
+            <div class="goal-inputs-container">
+              <div class="goal-input-row">
+                <div class="goal-title-flex"><span>🎯 {periodLabels[period]}目標金額</span></div>
+                <div class="goal-input-wrapper">
+                  <input class="goal-input" type="number" value={activePeriodData.goalAmt || ''} onChange={e => updatePeriodicGoal('amt', e.target.value)} placeholder="未設定" />
+                  <span style={{fontSize:'14px', color:'var(--muted)'}}>円</span>
+                </div>
+              </div>
+              <div class="goal-input-row">
+                <div class="goal-title-flex"><span>📦 {periodLabels[period]}目標件数</span></div>
+                <div class="goal-input-wrapper">
+                  <input class="goal-input" type="number" value={activePeriodData.goalCnt || ''} onChange={e => updatePeriodicGoal('cnt', e.target.value)} placeholder="未設定" />
+                  <span style={{fontSize:'14px', color:'var(--muted)'}}>件</span>
+                </div>
+              </div>
+            </div>
+            
+            {activePeriodData.goalAmt > 0 && (
+              <div class="progress-section">
+                <div class="progress-track"><div class="progress-bar" style={{ width: `${activePeriodData.percentAmt}%` }}></div></div>
+                <div class="goal-footer-row">
+                  <div class="goal-footer-top">
+                    <div class="goal-status-text">金額達成率 <strong>{activePeriodData.percentAmt}%</strong></div>
+                    {activePeriodData.remainAmt <= 0 ? (
+                      <div class="goal-remain-text done">🎉 金額目標達成！</div>
+                    ) : (
+                      <div class="goal-remain-text remain">残り {activePeriodData.remainAmt.toLocaleString()}円</div>
+                    )}
+                  </div>
+                  
+                  {/* ⚡ パターンB: プラットフォーム別 目安必要件数の即時換算 */}
+                  {activePeriodData.remainAmt > 0 && (
+                    <div class="goal-footer-sub">
+                      <span style={{ color: 'var(--muted)' }}>目安残数:</span>
+                      <span style={{ color: '#ff5555', fontWeight: '800' }}>
+                        D: 約{activePeriodData.needCntD}件
+                        <span style={{ fontSize: '10px', color: 'var(--muted)', marginLeft: '3px' }}>
+                          ({activePeriodData.effectiveDTanka}円{activePeriodData.isRealD ? '' : '基'})
+                        </span>
+                      </span>
+                      <span style={{ color: '#00e676', fontWeight: '800' }}>
+                        U: 約{activePeriodData.needCntU}件
+                        <span style={{ fontSize: '10px', color: 'var(--muted)', marginLeft: '3px' }}>
+                          ({activePeriodData.effectiveUTanka}円{activePeriodData.isRealU ? '' : '基'})
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activePeriodData.goalCnt > 0 && (
+              <div class="progress-section" style={{marginTop:'8px'}}>
+                <div class="progress-track"><div class="progress-bar green" style={{ width: `${activePeriodData.percentCnt}%` }}></div></div>
+                <div class="goal-footer-row">
+                  <div class="goal-footer-top">
+                    <div class="goal-status-text">件数達成率 <strong>{activePeriodData.percentCnt}%</strong></div>
+                    {activePeriodData.remainCnt <= 0 ? (
+                      <div class="goal-remain-text done">🎉 件数目標達成！</div>
+                    ) : (
+                      <div class="goal-remain-text remain">残り {activePeriodData.remainCnt} 件</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── TAB 1: DASHBOARD (HOME) ── */}
+        <Planner view={activeTab} vault={vault} goals={periodicGoals} date={date} p={planning} onChange={savePlanning} navigate={setActiveTab} error={planState.error} />
+        <div class={`view-container ${activeTab === 'dashboard' ? 'active' : ''}`}>
+          
+          {/* Platform breakdown: stacked cards for narrow screens */}
+          <div class="section-title" style={{marginTop: 0}}>プラットフォーム別内訳</div>
+          <div class="platform-overview">
+            {PLATFORMS.map(p => {
+              const targetPf = activePeriodData.pf?.[p.key] || { s: 0, c: 0 };
+              const pfTanka = targetPf.c > 0 ? Math.round(targetPf.s / targetPf.c) : 0;
+              return <div key={p.key} class="platform-overview-card" style={{borderLeftColor:p.color}}>
+                <div class="platform-overview-name" style={{color:p.color}}>{p.label}</div>
+                <div class="platform-overview-amount">{targetPf.s.toLocaleString()}<small> 円</small></div>
+                <div class="platform-overview-stats"><span>{targetPf.c} 件</span><span>平均 {pfTanka > 0 ? pfTanka.toLocaleString()+'円/件' : '-'}</span></div>
+              </div>;
+            })}
+          </div>
+
+          {period === 'day' && (
+            <>
+              <div class="section-title">📝 本日の概要 & コンディション</div>
+              <div class="card grid-3">
+                <div><label>営業日</label><input type="date" value={date} onChange={e => setDate(e.target.value)} style={{borderColor:'var(--teal)'}} /></div>
+                <div><label>天気</label><select value={weather} onChange={e => updateDayField('weather', e.target.value)}>{WEATHERS.map(w => <option key={w}>{w}</option>)}</select></div>
+                <div><label>睡眠時間 (h)</label><input type="number" step="0.5" value={sleepHours} onChange={e => updateDayField('sleepHours', e.target.value)} /></div>
+              </div>
+
+              {/* ⚡ 体調直感タップ */}
+              <div class="card" style={{padding:'14px 18px', marginTop:'-6px'}}>
+                <label>本日の体調レベル (直感タップ)</label>
+                <div class="condition-row">
+                  {COND_ICONS.map(c => (
+                    <button key={c.val} class={`cond-btn ${condition === c.val ? 'active' : ''}`} onClick={() => updateDayField('condition', c.val)}>
+                      {c.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 📝 日次メモ */}
+              <div class="section-title">📝 本日の気づき・日記メモ</div>
+              <div class="card" style={{padding:'14px'}}>
+                <textarea
+                  class="daily-memo-textarea"
+                  placeholder="現場での気づき、加盟店の状況、感情、トラブル、明日の課題など何でも殴り書き。"
+                  value={dailyMemo}
+                  onChange={e => updateDayField('dailyMemo', e.target.value)}
+                />
+              </div>
+            </>
+          )}
+
+          {/* セット詳細 */}
+          {period === 'day' && (
+            <>
+              <div class="section-title" id="delivery-set-entry" style={{scrollMarginTop:"90px"}}>⏱️ 稼働セットごとの詳細入力</div>
+              {calced.map((s, i) => {
+                const durText = s.dur ? `${s.dur.h > 0 ? s.dur.h + '時間' : ''}${s.dur.m}分` : '時間未入力';
+                return (
+                  <div key={i} class="set-card">
+                    <div class="set-header" onClick={() => toggleOpen(i)}>
+                      <div class="set-header-top">
+                        <div class="set-title">
+                          <span>SET {i+1}</span>
+                          {s.start && !s.end && <span class="set-badge active">稼働中</span>}
+                          {s.start && s.end && <span class="set-badge done">完了</span>}
+                        </div>
+                        <span class="chevron">{s.open ? '▲' : '▼'}</span>
+                      </div>
+                      <div class="set-summary-row1">{s.sc} 件 / {s.sp.toLocaleString()} 円</div>
+                      <div class="set-summary-row2">
+                        <span class="set-summary-tag">⏱️ {durText}</span>
+                        <span class="set-summary-tag">💴 時給 {s.setJikyu > 0 ? s.setJikyu.toLocaleString() + '円' : '-'}</span>
+                      </div>
+                    </div>
+
+                    {s.open && (
+                      <div style={{padding:'16px'}}>
+                        <div class="time-row">
+                          <div>
+                            <label>開始時刻</label>
+                            <div class="time-field">
+                              <input type="time" value={sets[i].start} onChange={e => updateSet(i,'start',e.target.value)} />
+                              <button class="stamp-btn" onClick={() => updateSet(i,'start',getNow())}>NOW</button>
+                            </div>
+                          </div>
+                          <div>
+                            <label>終了時刻</label>
+                            <div class="time-field">
+                              <input type="time" value={sets[i].end} onChange={e => updateSet(i,'end',e.target.value)} />
+                              <button class="stamp-btn secondary" onClick={() => updateSet(i,'end',getNow())}>FIN</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {PLATFORMS.map(p => (
+                          <div key={p.key} class="platform-block" style={{background: p.color+'06', borderColor: p.color+'25'}}>
+                            <div class="platform-title" style={{color: p.color}}>
+                              <span>{p.label}</span>
+                              <span class="diff-badge">+{s[p.key+'_p'].toLocaleString()}円 / {s[p.key+'_c']}件</span>
+                            </div>
+                            <div class="pf-inputs">
+                              <div><label>売上(累)</label><input type="number" placeholder="0" value={sets[i][p.key+'_cum'] || ''} onChange={e => updateSet(i, p.key+'_cum', e.target.value)} /></div>
+                              <div><label>件数(累)</label><input type="number" placeholder="0" value={sets[i][p.key+'_cnt_cum'] || ''} onChange={e => updateSet(i, p.key+'_cnt_cum', e.target.value)} /></div>
+                              <div><label>クエ(累)</label><input type="number" placeholder="0" value={sets[i][p.key+'_que_cum'] || ''} onChange={e => updateSet(i, p.key+'_que_cum', e.target.value)} /></div>
+                            </div>
+                          </div>
+                        ))}
+
+                        <div class="grid-2" style={{margin: '12px 0'}}>
+                          <div><label>走行距離累積 (km)</label><input type="number" placeholder="0" value={sets[i].km_cum} onChange={e => updateSet(i,'km_cum',e.target.value)} /></div>
+                          <div><label>区間距離</label><div style={{paddingTop:'14px', color:'var(--teal)', fontWeight:'800', fontFamily:'var(--font-mono)'}}>{s.km_p > 0 ? `+${s.km_p} km` : '-'}</div></div>
+                        </div>
+
+                        <div style={{marginTop:'10px'}}><label>戦術メモ</label><textarea rows="2" placeholder="メモ記入" value={sets[i].memo} onChange={e => updateSet(i,'memo',e.target.value)} /></div>
+                        {sets.length > 1 && <button class="del-btn" onClick={() => deleteSet(i)}>SET {i+1} を削除</button>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <button class="add-btn" onClick={addPeriodicSet}>＋ 次のセットを追加</button>
+
+              <div style={{marginTop:'24px', marginBottom:'24px'}}>
+                <button class="gen-btn" onClick={() => setShowLog(!showLog)}>{showLog ? '報告ログを閉じる' : '🚀 V5報告ログを生成'}</button>
+                {showLog && (
+                  <div class="log-box">
+                    <pre>{generateLog()}</pre>
+                    <button class="copy-btn" onClick={() => { navigator.clipboard.writeText(generateLog()); alert('コピー完了！'); }}>ログをコピーする</button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* ── TAB 2: MEMOS / INBOX (Google Keep風ポップアップ編集) ── */}
+        <div class={`view-container ${activeTab === 'memos' ? 'active' : ''}`}>
+          <div class="section-title">💡 クイック新規メモ (Inbox)</div>
+          <div class="card">
+            <div style={{display:'flex', gap:'8px', marginBottom:'12px'}}>
+              {MEMO_CATEGORIES.map(c => (
+                <button key={c} class={`memo-cat-btn ${newMemoCat === c ? 'active' : ''}`} onClick={() => setNewMemoCat(c)}>{c}</button>
+              ))}
+            </div>
+            <textarea
+              class="daily-memo-textarea"
+              placeholder="思いついたアイデア、買出し、備忘録などをパッと入力..."
+              value={newMemoText}
+              onChange={e => setNewMemoText(e.target.value)}
+              style={{minHeight:'110px'}}
+            />
+            <button class="gen-btn" style={{marginTop:'12px', padding:'16px', fontSize:'17px'}} onClick={addInboxMemo}>メモを保存する</button>
+          </div>
+
+          <div class="section-title">🔍 メモ検索 & 一覧 (タップして全面編集)</div>
+          <div style={{display:'flex', gap:'10px', marginBottom:'12px'}}>
+            <input type="text" placeholder="キーワードで即座に検索..." value={memoSearch} onChange={e => setMemoSearch(e.target.value)} />
+          </div>
+
+          <div class="memo-cat-filter">
+            {['すべて', ...MEMO_CATEGORIES].map(cat => (
+              <button key={cat} class={`memo-cat-btn ${memoFilter === cat ? 'active' : ''}`} onClick={() => setMemoFilter(cat)}>{cat}</button>
+            ))}
+          </div>
+
+          {filteredMemos.length === 0 ? (
+            <div style={{textAlign:'center', padding:'40px 20px', color:'var(--muted)', fontSize:'16px'}}>該当するメモがありません</div>
+          ) : (
+            filteredMemos.map(m => (
+              <div key={m.id} class="memo-item-card" onClick={() => setEditingMemoId(m.id)}>
+                <div class="memo-item-header">
+                  <span class="memo-tag-pill">{m.cat}</span>
+                  <span>{m.date} {m.time}</span>
+                </div>
+                
+                <div class="memo-preview-text">
+                  {m.text || <span style={{color:'var(--muted)'}}>（内容がありません）</span>}
+                </div>
+
+                <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginTop:'4px'}}>
+                  <span style={{fontSize:'12px', color:'var(--muted2)'}}>👆 タップで全面編集</span>
+                  <div style={{display:'flex', gap:'8px'}} onClick={e => e.stopPropagation()}>
+                    <button class="stamp-btn secondary" style={{minHeight:'36px', fontSize:'12px', padding:'0 12px'}} onClick={() => { navigator.clipboard.writeText(m.text); alert('コピーしました！'); }}>コピー</button>
+                    <button class="stamp-btn" style={{minHeight:'36px', fontSize:'12px', background:'rgba(255,50,50,0.2)', color:'#ff5555'}} onClick={() => deleteInboxMemo(m.id)}>削除</button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* 🪟 全面ポップアップ編集モーダル (Google Keep風) */}
+        {activeEditingMemo && (
+          <div class="modal-overlay" onClick={() => setEditingMemoId(null)}>
+            <div class="memo-modal-card" onClick={e => e.stopPropagation()}>
+              <div class="modal-header">
+                <div style={{display:'flex', gap:'6px', overflowX:'auto'}}>
+                  {MEMO_CATEGORIES.map(c => (
+                    <button
+                      key={c}
+                      class={`memo-cat-btn ${activeEditingMemo.cat === c ? 'active' : ''}`}
+                      style={{padding:'6px 12px', fontSize:'13px'}}
+                      onClick={() => setInboxMemoCat(activeEditingMemo.id, c)}
+                    >
+                      {c}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  class="stamp-btn secondary"
+                  style={{minHeight:'38px', padding:'0 14px', fontSize:'14px', borderRadius:'8px'}}
+                  onClick={() => setEditingMemoId(null)}
+                >
+                  完了
+                </button>
+              </div>
+
+              <div class="modal-body">
+                <textarea
+                  class="modal-textarea"
+                  placeholder="メモを入力..."
+                  value={activeEditingMemo.text}
+                  onChange={e => updateInboxMemoText(activeEditingMemo.id, e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div class="modal-footer">
+                <span style={{fontSize:'13px', color:'var(--muted)'}}>{activeEditingMemo.date} {activeEditingMemo.time}</span>
+                <div style={{display:'flex', gap:'8px'}}>
+                  <button
+                    class="stamp-btn secondary"
+                    style={{minHeight:'38px', fontSize:'13px', padding:'0 14px'}}
+                    onClick={() => { navigator.clipboard.writeText(activeEditingMemo.text); alert('コピーしました！'); }}
+                  >
+                    コピー
+                  </button>
+                  <button
+                    class="stamp-btn"
+                    style={{minHeight:'38px', fontSize:'13px', background:'rgba(255,50,50,0.2)', color:'#ff5555', padding:'0 14px'}}
+                    onClick={() => deleteInboxMemo(activeEditingMemo.id)}
+                  >
+                    削除
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── TAB 3: CALENDAR ── */}
+        <div class={`view-container ${activeTab === 'calendar' ? 'active' : ''}`}>
+          <div class="cal-header-container">
+            <div class="cal-title-nav">
+              <button class="cal-nav-btn" onClick={() => handleCalendarMonthChange(-1)}>◀</button>
+              <span class="cal-title-text">{calYear}年 {calMonth}月</span>
+              <button class="cal-nav-btn" onClick={() => handleCalendarMonthChange(1)}>▶</button>
+            </div>
+            <div class="cal-monthly-total">{currentCalendarMonthTotal.toLocaleString()} 円</div>
+          </div>
+
+          <div class="card" style={{padding:'6px', marginBottom: '24px'}}>
+            <div class="cal-grid">
+              {['月','火','水','木','金','土','日'].map(w => <div key={w} class="cal-head-cell">{w}</div>)}
+              {calendarDays.map((c, idx) => c.empty ? <div key={idx} class="cal-day-cell empty" /> : (
+                <div key={idx} class={`cal-day-cell ${date === c.dateKey ? 'selected' : ''}`} onClick={() => { setDate(c.dateKey); setPeriod('day'); setActiveTab('dashboard'); }}>
+                  <div class="cal-day-top">
+                    <span class="cal-day-num current-month">{c.dayNum}</span>
+                    {c.cond && <span class="cal-day-cond">{COND_ICONS.find(icon => icon.val === c.cond)?.label.split(' ')[0]}</span>}
+                  </div>
+                  <div class="cal-day-amt-box">
+                    <span class="cal-day-amt">{formatSmartAmt(c.amt)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div class={`view-container ${activeTab === 'expenses' ? 'active' : ''}`}>
+          <ExpenseView expenses={expenses} onSave={saveExpenses} loadError={expenseState.error} />
+        </div>
+
+        {/* ── TAB 4: SETTINGS ── */}
+        <div class={`view-container ${activeTab === 'settings' ? 'active' : ''}`}>
+          <div class="section-title">☁️ iCloud Drive バックアップ / 同期</div>
+          <div class="card" style={{borderColor:'var(--blue)', background:'rgba(41,121,255,0.03)'}}>
+            <p style={{fontSize:'14px', color:'var(--muted2)', marginBottom:'14px'}}>
+              稼働ログ、メモ、目標設定、経費を含む全データをJSONファイルで保存・復元します。写真は含みません。
+            </p>
+            <div class="grid-2">
+              <button class="gen-btn" style={{background:'var(--blue)'}} onClick={saveToiCloudJSON}>💾 iCloudへ完全保存</button>
+              <button class="gen-btn" style={{background:'rgba(255,255,255,0.1)', color:'#fff', border:'1.5px solid var(--border)'}} onClick={() => document.getElementById('settingsCloudLoad').click()}>📥 iCloudから同期</button>
+            </div>
+            <input type="file" id="settingsCloudLoad" accept=".json" style={{display:'none'}} onChange={loadFromiCloudJSON} />
+          </div>
+          <div class="section-title">データコントロール</div>
+          <div class="card">
+            <button class="gen-btn" style={{background:'rgba(255,92,26,0.2)', color:'var(--accent)', border:'1.5px solid var(--accent)'}} onClick={startNewDay}>新しい営業日を開始する (4時起点)</button>
+          </div>
+        </div>
+
+        {/* BOTTOM NAV TABS */}
+        <nav class="bottom-nav">
+          <button class={`tab-btn ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => setActiveTab('dashboard')}>
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span>ホーム</span>
+          </button>
+          <button class={`tab-btn ${activeTab === 'memos' ? 'active' : ''}`} onClick={() => setActiveTab('memos')}>
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><span>メモ</span>
+          </button>
+          <button class={`tab-btn ${activeTab === 'expenses' ? 'active' : ''}`} onClick={() => setActiveTab('expenses')}>
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M5 3h14v18l-3-2-4 2-4-2-3 2zM8 7h8M8 11h8M8 15h4"/></svg><span>経費</span>
+          </button>
+          <button class={`tab-btn ${activeTab === 'calendar' ? 'active' : ''}`} onClick={() => setActiveTab('calendar')}>
+            <svg class="nav-icon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="18" y2="10"/></svg><span>カレンダー</span>
+          </button>
+          <button class={`tab-btn ${activeTab === 'settings' ? 'active' : ''}`} onClick={() => setActiveTab('settings')}>
+            <svg class="nav-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83-2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg><span>設定</span>
+          </button>
+        </nav>
+      </div>
+    </div>
+  );
+}
+
+const EMPTY_SET = () => ({
+  start: '', end: '', d_cum: '', u_cum: '', r_cum: '', m_cum: '', d_cnt_cum: '', u_cnt_cum: '', r_cnt_cum: '', m_cnt_cum: '', d_que_cum: '', u_que_cum: '', r_que_cum: '', m_que_cum: '', km_cum: '', memo: '', open: true,
+});
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
+
+
+

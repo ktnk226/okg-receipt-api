@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+  <title>🛡️ AI Receipt Importer V1</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+JP:wght@400;500;700;900&swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f1117; --surface: #1a1c24; --accent: #2979ff; --green: #00e676; --text: #f0f0f0;
+      --border: rgba(255,255,255,0.1); --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; padding-bottom: 50px; }
+    #root { max-width: 500px; margin: 0 auto; padding: 15px; }
+    .header { padding: 20px 0; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
+    .logo { width: 40px; height: 40px; background: var(--accent); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+    .title { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1px; }
+    .upload-zone { background: var(--surface); border: 2px dashed var(--border); border-radius: var(--radius); padding: 30px; text-align: center; margin-bottom: 20px; cursor: pointer; display: block; }
+    .loading { color: var(--accent); font-weight: bold; margin: 20px 0; text-align: center; }
+    .card { background: var(--surface); border-radius: var(--radius); padding: 15px; margin-bottom: 10px; border: 1px solid var(--border); }
+    .field { margin-bottom: 12px; }
+    .label { font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 4px; display: block; }
+    input, select { width: 100%; background: rgba(0,0,0,0.2); border: 1px solid var(--border); padding: 10px; color: #fff; border-radius: 6px; font-size: 14px; }
+    .btn { width: 100%; padding: 15px; border-radius: var(--radius); border: none; font-weight: bold; cursor: pointer; font-size: 16px; }
+    .btn-primary { background: var(--accent); color: #fff; margin-top: 10px; }
+    .btn-success { background: var(--green); color: #000; margin-top: 20px; }
+    .btn-ghost { background: transparent; color: #ff5252; border: 1px solid #ff5252; margin-top: 10px; font-size: 12px; padding: 8px; }
+    .list-item { background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; margin-bottom: 8px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect } = React;
+
+const CATEGORIES = ["旅費交通費", "通信費", "消耗品費", "新聞図書費", "接待交際費", "地代家賃", "水道光熱費", "雑費"];
+
+function App() {
+  const [items, setItems] = useState(() => JSON.parse(localStorage.getItem('exp_items')) || []);
+  const [current, setCurrent] = useState(null);
+  const [apiBase, setApiBase] = useState(() => localStorage.getItem('receipt_api_url') || '');
+  const [accessToken, setAccessToken] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const analyzeReceipt = async (event) => {
+    const file = event.target.files[0];
+    event.target.value = '';
+    if (!file) return;
+    setError('');
+    let endpoint;
+    try {
+      endpoint = new URL(apiBase.trim());
+      if (endpoint.protocol !== 'https:' || endpoint.username || endpoint.password || endpoint.search || endpoint.hash) throw Error();
+      endpoint.pathname = '/analyze';
+    } catch { setError('接続設定に正しいHTTPS URLを入力してください。'); return; }
+    if (!accessToken.trim()) { setError('利用パスワードを入力してください。'); return; }
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setError('5MB以下のJPEG・PNG・WebP画像を選択してください。'); return;
+    }
+    setLoading(true);
+    try {
+      const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('画像を読み込めませんでした。'));
+        reader.readAsDataURL(file);
+      });
+      const response = await fetch(endpoint.href, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken.trim()}` },
+        body: JSON.stringify({ mimeType: file.type, data: dataUrl.split(',')[1] }),
+        signal: AbortSignal.timeout(35000), credentials: 'omit', redirect: 'error'
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || '解析に失敗しました。');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(result.date) || !Number.isSafeInteger(result.amount) || result.amount < 0 ||
+          typeof result.store !== 'string' || !CATEGORIES.includes(result.category)) throw new Error('解析結果を確認できません。手動入力してください。');
+      setCurrent({ date: result.date, amount: result.amount, store: result.store, category: result.category });
+    } catch (err) { setError(err.name === 'TimeoutError' ? '通信がタイムアウトしました。' : (err.message || '接続に失敗しました。')); }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => {
+    localStorage.setItem('exp_items', JSON.stringify(items));
+  }, [items]);
+
+  const startManualEntry = () => {
+    const today = new Date();
+    const date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setCurrent({ date, amount: 0, store: "", category: "雑費" });
+  };
+
+  const addItem = () => {
+    setItems([current, ...items]);
+    setCurrent(null);
+  };
+
+  const downloadCSV = () => {
+    let csv = "収支,発生日,勘定科目,金額,備考\n";
+    items.forEach(item => {
+      csv += `支出,${item.date},${item.category},${item.amount},${item.store}\n`;
+    });
+    const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `freee_import_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  };
+
+  return (
+    <div>
+      <div className="header">
+        <div className="logo">🧾</div>
+        <div>
+          <div className="title">AI RECEIPT V1</div>
+          <p style={{fontSize:'10px', color:'var(--accent)'}}>OKG Project Tax Module</p>
+        </div>
+      </div>
+
+      {!current && !loading && (
+        <div className="card">
+          <p style={{fontSize:'13px', marginBottom:'12px'}}>{apiBase && accessToken ? '画像を解析した後、内容を確認・修正してください。' : 'AI解析は接続設定後に利用できます。手動入力はそのまま使えます。'}</p>
+          <details>
+            <summary>AI解析の接続設定</summary>
+            <label className="label" htmlFor="api-url">接続先URL</label>
+            <input id="api-url" type="url" placeholder="https://okg-receipt-api.example.workers.dev" value={apiBase} onChange={e => { setApiBase(e.target.value); localStorage.setItem('receipt_api_url', e.target.value); }} />
+            <label className="label" htmlFor="access-token">利用パスワード（GoogleのAPIキーではありません）</label>
+            <input id="access-token" type="password" autoComplete="off" value={accessToken} onChange={e => setAccessToken(e.target.value)} />
+            <p style={{fontSize:'12px'}}>利用パスワードは保存されません。自分で管理する接続先だけを設定してください。</p>
+          </details>
+          {apiBase && accessToken && <label className="upload-zone">
+            📸 レシートを撮影 / 選択
+            <input aria-label="レシート画像" type="file" accept="image/jpeg,image/png,image/webp" style={{display:'none'}} onChange={analyzeReceipt} />
+          </label>}
+          <p style={{fontSize:'12px'}}>AI解析では選択した画像をGoogleへ送信します。</p>
+          <button type="button" className="btn btn-primary" onClick={startManualEntry}>手動で入力する</button>
+        </div>
+      )}
+
+      {loading && <p role="status" className="loading">AIが解析中です…</p>}
+      {error && <p role="alert">{error} 手動入力も利用できます。</p>}
+      {current && (
+        <div className="card">
+          <div className="field"><label className="label">日付</label><input type="date" value={current.date} onChange={e=>setCurrent({...current, date:e.target.value})} /></div>
+          <div className="field"><label className="label">金額 (円)</label><input type="number" value={current.amount} onChange={e=>setCurrent({...current, amount:e.target.value})} /></div>
+          <div className="field"><label className="label">店名</label><input type="text" value={current.store} onChange={e=>setCurrent({...current, store:e.target.value})} /></div>
+          <div className="field">
+            <label className="label">勘定科目</label>
+            <select value={current.category} onChange={e=>setCurrent({...current, category:e.target.value})}>
+              {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <button className="btn btn-primary" onClick={addItem}>リストに追加</button>
+          <button className="btn btn-ghost" onClick={()=>setCurrent(null)}>やり直し</button>
+        </div>
+      )}
+
+      {items.length > 0 && (
+        <div style={{marginTop:'30px'}}>
+          <div style={{display:'flex', justifyContent:'space-between', marginBottom:'10px'}}>
+            <span style={{fontSize:'12px', fontWeight:'bold'}}>未出力: {items.length}件</span>
+            <button style={{background:'none', border:'none', color:'#ff5252', fontSize:'11px'}} onClick={()=>setItems([])}>全クリア</button>
+          </div>
+          {items.map((item, idx) => (
+            <div key={idx} className="list-item">
+              <span>{item.date} | {item.store}</span>
+              <span style={{fontWeight:'bold'}}>{parseInt(item.amount).toLocaleString()}円</span>
+            </div>
+          ))}
+          <button className="btn btn-success" onClick={downloadCSV}>freee用CSVを出力</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
